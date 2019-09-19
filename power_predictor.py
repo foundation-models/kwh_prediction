@@ -213,18 +213,19 @@ class PowerForecaster:
     def plot_predcition(self, predicted):
         style = [':', '--', '-']
         pd.plotting.register_matplotlib_converters()
-        plt.plot(self.test_y[ColumnNames.LABELS.value].iloc[:len(predicted)], predicted[ColumnNames.LABELS.value])
+        label_column = ColumnNames.LABELS.value
+        plt.plot(predicted.index, self.test_y[label_column].iloc[:len(predicted)], predicted[label_column])
         plt.show()
 
     def predict(self):
         if self.model == Models.PROPHET:
             self.future = self.model.value.make_future_dataframe(Constants.DEFAULT_FUTURE_PERIODS.value,
-                                                            freq=Constants.DEFAULT_FUTURE_FREQ.value)
+                                                            freq=Constants.DEFAULT_FUTURE_FREQ.value, include_history=False)
             print("Done future extraction")
         predicted = None
         if self.model == Models.PROPHET:
             predicted = self.model.value.predict(self.future)
-            predicted[ColumnNames.LABELS.value] = predicted['yhat']
+            predicted[ColumnNames.VALUE.value] = predicted['yhat']
         elif self.model == Models.SARIMAX:
             predicted = self.model_fit.predict(start="2013-1-12", end="2013-1-14", dynamic=True)
         elif self.model == Models.LSTM:
@@ -250,9 +251,9 @@ class PowerForecaster:
         rmse = sqrt(mean_squared_error(inv_y, inv_yhat))
         print('Test RMSE: %.3f' % rmse)
 
-    def plot_future(self):
-        self.prophet.plot(self.forecast, xlabel='Date', ylabel='KWH')
-        self.prophet.plot_components(self.forecast)
+    def plot_future(self, predicted):
+        self.model.value.plot(predicted, xlabel='Date', ylabel='KWH')
+        self.model.value.plot_components(predicted)
 
     def plot_history(self):
         plt.plot(self.history['loss'])
