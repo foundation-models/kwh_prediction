@@ -34,7 +34,7 @@ class Constants(Enum):
     FORECASTED_TEMPERATURE_FILE = 'data/t.df'
     FORECASTED_TEMPERATURE_URL = 'https://drive.google.com/uc?export=download&id=1z2MBYJ8k4M5J3udlFVc2d8opE_f-S4BK'
     DEFAULT_FUTURE_PERIODS = 4 * 24  # with freq = 15 * 60  that is  1 day
-    DEFAULT_FUTURE_FREQ = '15m'  # frequency of recording power
+    DEFAULT_FUTURE_FREQ = '15T'  # frequency of recording power
     # define model configuration
     SARIMAX_ORDER = (1, 1, 1)
     SARIMAX_SEASONAL_ORDER = (1, 1, 1, 12)
