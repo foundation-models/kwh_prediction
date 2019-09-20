@@ -74,7 +74,7 @@ class PowerForecaster:
 
         # we interpolate temperature using prophet to use it in a multivariate forecast
         temperature = ColumnNames.TEMPERATURE.value
-        facebook_prophet_filter(df, ColumnNames.TEMPERATURE.value,
+        df = facebook_prophet_filter(df, ColumnNames.TEMPERATURE.value,
                                                   Constants.FORECASTED_TEMPERATURE_FILE.value)
 
         # now turn to kwh and make the format compatible with prophet
