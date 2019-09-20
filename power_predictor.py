@@ -267,7 +267,9 @@ class PowerForecaster:
             print(start, end)
             predicted = self.model_fit.predict(start=start[:10], end=end[:10], dynamic=True)
         elif self.model == Models.VAR:
-            predicted = self.model_fit.forecast(self.model_fit.y, period)
+            predicted_array = self.model_fit.forecast(self.model_fit.y, period)
+            predicted = pd.DataFrame(predicted_array)
+            predicted.index = self.test_y.index[:len(predicted)]
         elif self.model == Models.LSTM:
             predicted = self.model.value.predict(self.test_X)
         else:
