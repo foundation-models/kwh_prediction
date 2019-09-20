@@ -196,11 +196,11 @@ class PowerForecaster:
             past[ColumnNames.DATE_STAMP.value] = self.train_y.index
             self.model.value.fit(past)
         elif self.model == Models.SARIMAX:
-            sarimax_model = sm.tsa.statespace.SARIMAX(self.df[ColumnNames.VALUE.value],
+            self.model.value = sm.tsa.statespace.SARIMAX(self.df[ColumnNames.VALUE.value],
                                                       order=Constants.SARIMAX_ORDER.value,
                                                       seasonal_order=Constants.SARIMAX_SEASONAL_ORDER.value)  # , order=(2, 1, 4), seasonal_order=(0, 1, 1, 7))
 
-            self.model_fit = sarimax_model.fit()
+            self.model_fit = self.model.value.fit()
         elif self.model == Models.LSTM:
             history_object = self.model.value.fit(self.train_X, self.train_y, epochs=Constants.EPOCHS.value,
                                                   batch_size=Constants.BATCH_SIZE.value,
