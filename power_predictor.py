@@ -227,6 +227,14 @@ class PowerForecaster:
             print("SARIMAX fitting ....")
             self.model_fit = model.fit()
             self.model_fit.summary()
+
+            print("SARIMAX forecast", self.model_fit.forecast())
+        elif self.model == Models.VAR:
+            model = VAR(self.train_X)
+            print("VAR fitting ....")
+            self.model_fit = model.fit()
+            self.model_fit.summary()
+            print("VAR forecast", self.model_fit.forecast())
         elif self.model == Models.LSTM:
             history_object = self.model.value.fit(self.train_X, self.train_y, epochs=Constants.EPOCHS.value,
                                                   batch_size=Constants.BATCH_SIZE.value,
@@ -251,7 +259,7 @@ class PowerForecaster:
         if self.model == Models.PROPHET:
             predicted = self.model.value.predict(self.future)
             predicted[ColumnNames.VALUE.value] = predicted[ColumnNames.FORECASTED_VALUE.value]
-        elif self.model == Models.ARIMA:
+        elif self.model == Models.ARIMA or self.model == Models.VAR:
             end = str(self.train_y.index[-1])
             period = Constants.DEFAULT_FUTURE_PERIODS.value
             start = str(self.train_y.index[-period])
