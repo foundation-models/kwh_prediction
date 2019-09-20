@@ -36,7 +36,7 @@ class Constants(Enum):
     DEFAULT_FUTURE_PERIODS = 4 * 24 * 10 # with freq = 15 * 60  that is  1 day
     DEFAULT_FUTURE_FREQ = '15T'  # frequency of recording power
     # define model configuration
-    SARIMAX_ORDER = (1, 1, 1)
+    SARIMAX_ORDER = (7, 1, 7)
     SARIMAX_SEASONAL_ORDER = (1, 1, 1, 12)
 
 
@@ -130,8 +130,27 @@ class PowerForecaster:
         print(self.train_X.shape, self.train_y.shape, self.test_X.shape, self.test_y.shape)
 
     def stationary_test(self):
+        dataset = self.test_y.dropna()
+        seasonal_dataset = sm.tsa.seasonal_decompose(dataset, freq=365)
+        fig = seasonal_dataset.plot()
+        fig.set_figheight(8)
+        fig.set_figwidth(15)
+        fig.show()
+
+        def p_value(dataset):
+            # ADF-test(Original-time-series)
+            dataset.dropna()
+            p_value = sm.tsa.adfuller(dataset, regression='ct')
+            print('p-value:{}'.format(p_value))
+            p_value = sm.tsa.adfuller(dataset, regression='c')
+            print('p-value:{}'.format(p_value))
+
+        p_value(self.train_y)
+        p_value(self.test_y)
+
         # Test works for only 12 variables, check the eigenvalues
-        return coint_johansen(self.df[ColumnNames.FEATURES.value].dropna(), -1, 1).eig
+        johnsen_test = coint_johansen(self.df[ColumnNames.FEATURES.value].dropna(), -1, 1).eig
+        return johnsen_test
 
     def seasonal_prediction(self):
         from statsmodels.tsa.api import ExponentialSmoothing, SimpleExpSmoothing, Holt
@@ -196,11 +215,13 @@ class PowerForecaster:
             past[ColumnNames.DATE_STAMP.value] = self.train_y.index
             self.model.value.fit(past)
         elif self.model == Models.ARIMA:
-            model = sm.tsa.statespace.SARIMAX(self.df[ColumnNames.VALUE.value],
+            model = sm.tsa.statespace.SARIMAX(self.train_y,
                                                       order=Constants.SARIMAX_ORDER.value,
-                                                      seasonal_order=Constants.SARIMAX_SEASONAL_ORDER.value)  # , order=(2, 1, 4), seasonal_order=(0, 1, 1, 7))
-
+                                                      seasonal_order=Constants.SARIMAX_SEASONAL_ORDER.value,
+                                                enforce_stationarity=False, enforce_invertibility=False, freq='15T')
+            print("SARIMAX fitting ....")
             self.model_fit = model.fit()
+            model.summary()
         elif self.model == Models.LSTM:
             history_object = self.model.value.fit(self.train_X, self.train_y, epochs=Constants.EPOCHS.value,
                                                   batch_size=Constants.BATCH_SIZE.value,
