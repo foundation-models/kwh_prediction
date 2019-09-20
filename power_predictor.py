@@ -252,19 +252,22 @@ class PowerForecaster:
         plt.show()
 
     def predict(self):
+        period = Constants.DEFAULT_FUTURE_PERIODS.value
         if self.model == Models.PROPHET:
-            self.future = self.model.value.make_future_dataframe(Constants.DEFAULT_FUTURE_PERIODS.value,
+            self.future = self.model.value.make_future_dataframe(period=period,
                                                                  freq=Constants.DEFAULT_FUTURE_FREQ.value,
                                                                  include_history=False)
+
         if self.model == Models.PROPHET:
             predicted = self.model.value.predict(self.future)
             predicted[ColumnNames.VALUE.value] = predicted[ColumnNames.FORECASTED_VALUE.value]
-        elif self.model == Models.ARIMA or self.model == Models.VAR:
+        elif self.model == Models.ARIMA:
             end = str(self.train_y.index[-1])
-            period = Constants.DEFAULT_FUTURE_PERIODS.value
             start = str(self.train_y.index[-period])
             print(start, end)
             predicted = self.model_fit.predict(start=start[:10], end=end[:10], dynamic=True)
+        elif self.model == Models.VAR:
+            predicted = self.model_fit.forecast(self.model_fit.y, period)
         elif self.model == Models.LSTM:
             predicted = self.model.value.predict(self.test_X)
         else:
