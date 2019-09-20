@@ -54,7 +54,7 @@ def facebook_prophet_filter(df, column_name, dump_file=None):
     prophet.fit(df)
     prophesied = prophet.predict(df)
     if dump_file is not None:
-        with open(df, "wb") as file:
+        with open(dump_file, "wb") as file:
             pickle.dump(prophesied, file)
     return prophesied
 
