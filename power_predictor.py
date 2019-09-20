@@ -51,9 +51,9 @@ class ColumnNames(Enum):
     DATE = 'date'
     TIME = 'time'
     DATE_STAMP = 'ds'  # Facebook Prophet requires this name
-    FEATURES = [VALUE, TEMPERATURE]
+    FEATURES = [TEMPERATURE, VALUE]
     LABELS = [VALUE]
-    ORIGINAL_FEATURES = [POWER, TEMPERATURE]
+    ORIGINAL_FEATURES = [TEMPERATURE, POWER]
 
 
 class Models(Enum):
