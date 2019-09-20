@@ -210,7 +210,7 @@ class PowerForecaster:
         else:
             raise ValueError("{} is not defined".format(self.model))
 
-    def plot_predcition(self, predicted):
+    def plot_prediction(self, predicted):
         style = [':', '--', '-']
         pd.plotting.register_matplotlib_converters()
         label_column = ColumnNames.LABELS.value
@@ -221,8 +221,6 @@ class PowerForecaster:
         if self.model == Models.PROPHET:
             self.future = self.model.value.make_future_dataframe(Constants.DEFAULT_FUTURE_PERIODS.value,
                                                             freq=Constants.DEFAULT_FUTURE_FREQ.value, include_history=False)
-            print("Done future extraction")
-        predicted = None
         if self.model == Models.PROPHET:
             predicted = self.model.value.predict(self.future)
             predicted[ColumnNames.VALUE.value] = predicted[ColumnNames.FORECASTED_VALUE.value]
