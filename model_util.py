@@ -54,12 +54,12 @@ def facebook_prophet_filter(df, column_name, dump_file=None):
     model.fit(df)
     interpolated = model.predict(df)
     interpolated.index = df.index
-    df[[column_name]] = interpolated[['yhat']]
+    df[column_name] = interpolated['yhat']
 
     if dump_file is not None:
         with open(dump_file, "wb") as file:
             pickle.dump(interpolated, file)
-    return df
+    #return df
 
 
 
