@@ -234,8 +234,7 @@ class PowerForecaster:
             model = VAR(endog=self.train_X[ColumnNames.FEATURES.value].dropna())
             print("VAR fitting ....")
             self.model_fit = model.fit()
-            #self.model_fit.summary()
-            print("VAR forecast", self.model_fit.forecast())
+            self.model_fit.summary()
         elif self.model == Models.LSTM:
             history_object = self.model.value.fit(self.train_X, self.train_y, epochs=Constants.EPOCHS.value,
                                                   batch_size=Constants.BATCH_SIZE.value,
