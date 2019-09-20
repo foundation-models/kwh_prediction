@@ -230,7 +230,7 @@ class PowerForecaster:
 
             print("SARIMAX forecast", self.model_fit.forecast())
         elif self.model == Models.VAR:
-            model = VAR(self.train_X)
+            model = VAR(self.train_X[ColumnNames.FEATURES.value])
             print("VAR fitting ....")
             self.model_fit = model.fit()
             self.model_fit.summary()
