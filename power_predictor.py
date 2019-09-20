@@ -46,13 +46,13 @@ class Constants(Enum):
 class ColumnNames(Enum):
     POWER = 'actual_kwh'
     TEMPERATURE = 'actual_temperature'
-    VALUE = 'y'  # Facebook Prophet requires this name and it should be numeric
-    FORECASTED_VALUE = 'yhat'
+    LABEL = 'y'  # Facebook Prophet requires this name and it should be numeric
+    FORECAST = 'yhat'
     DATE = 'date'
     TIME = 'time'
     DATE_STAMP = 'ds'  # Facebook Prophet requires this name
-    FEATURES = [TEMPERATURE, VALUE]
-    LABELS = [VALUE]
+    FEATURES = [TEMPERATURE, LABEL]
+    LABELS = [LABEL]
     ORIGINAL_FEATURES = [TEMPERATURE, POWER]
 
 
@@ -84,10 +84,10 @@ class PowerForecaster:
         interpolated_df = facebook_prophet_filter(df, ColumnNames.TEMPERATURE.value,
                                                   Constants.FORECASTED_TEMPERATURE_FILE.value)
         interpolated_df.index = df.index
-        df[[ColumnNames.TEMPERATURE.value]] = interpolated_df[[ColumnNames.FORECASTED_VALUE.value]]
+        df[[ColumnNames.TEMPERATURE.value]] = interpolated_df[[ColumnNames.FORECAST.value]]
 
         # now turn to kwh and make the format compatible with prophet
-        df = df.rename(columns={ColumnNames.POWER.value: ColumnNames.VALUE.value})
+        df = df.rename(columns={ColumnNames.POWER.value: ColumnNames.LABEL.value})
 
         # for any regression or forecasting it is better to work with normalized data
         self.transformer = QuantileTransformer()  # handle outliers better than MinMaxScalar
@@ -120,7 +120,7 @@ class PowerForecaster:
 
         # frame as supervised learning
         reframed = series_to_supervised(upsampled[ColumnNames.FEATURES.value],
-                                        ColumnNames.FEATURES.value, ColumnNames.VALUE.value, 1, 1)
+                                        ColumnNames.FEATURES.value, ColumnNames.LABEL.value, 1, 1)
         print(reframed.head())
         # split into train and test sets
         train, test = self.train_test_split(reframed)
@@ -260,7 +260,7 @@ class PowerForecaster:
 
         if self.model == Models.PROPHET:
             predicted = self.model.value.predict(self.future)
-            predicted[ColumnNames.VALUE.value] = predicted[ColumnNames.FORECASTED_VALUE.value]
+            predicted[ColumnNames.LABEL.value] = predicted[ColumnNames.FORECAST.value]
         elif self.model == Models.ARIMA:
             end = str(self.train_y.index[-1])
             start = str(self.train_y.index[-period])
@@ -276,6 +276,46 @@ class PowerForecaster:
         else:
             raise ValueError("{} is not defined".format(self.model))
         return predicted
+
+    def process(self, window_size):
+        # Generate the data matrix      
+        length0 = self.df.shape[0]
+        sliding_window_data = np.zeros((length0 - window_size, window_size))
+        sliding_window_label = np.zeros((length0 - window_size, 1))
+        label_column = ColumnNames.LABEL.value
+        for counter in range(length0 - window_size):
+            sliding_window_label[counter, :] = self.df[label_column][counter + window_size]
+        feature_column = ColumnNames.TEMPERATURE.value
+        for counter in range(length0 - window_size):
+            sliding_window_data[counter, :] = self.df[feature_column][
+                                              counter: counter + window_size]
+        print('Random shuffeling')
+        length = sliding_window_data.shape[0]
+        print("sliding window length", length)
+        idx = np.random.choice(length, length, replace=False)
+        
+        frac = Constants.WINDOW_TIME_STEPS.value
+        #if not self.random:
+        idx = np.arange(length)
+        self.val_idx = idx[int( * length):]
+
+        shuf_data = sliding_window_data[idx, :]
+        shuf_label = sliding_window_label[idx, :]
+
+        self.shuf_data = shuf_data
+        self.shuf_label = shuf_label
+        self.train = sliding_window_data
+        self.label = sliding_window_label
+
+        self.train_X = shuf_data[:int(frac * length), :]
+        self.train_y = shuf_label[:int(frac * length), :]
+        self.train_size = int(frac * length)
+
+        self.test_X = shuf_data[int(frac * length):, :]
+        self.test_y = shuf_label[int(frac * length):, :]
+        self.val_size = int((1 - frac) * length)
+
+        return None
 
     def evaluate(self):
         # make a prediction
@@ -314,7 +354,7 @@ class ModelEvaluator:
         tscv = TimeSeriesSplit(n_splits=10)
         for train_index, test_index in tscv.split(self.df_normalized):
             print("TRAIN:", train_index, "TEST:", test_index)
-            y_column = self.df_normalized[ColumnNames.VALUE.value]
+            y_column = self.df_normalized[ColumnNames.LABEL.value]
             y_train, y_test = y_column[train_index], y_column[test_index]
             model.fit(pd.DataFrame(y_train))
             forecast = model.forecast(None)
