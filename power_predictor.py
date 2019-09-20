@@ -205,8 +205,8 @@ class PowerForecaster:
 
         by_dow = df.groupby(by=df.dow).mean()[ColumnNames.FEATURES.value]
         ticks = 4 * 60 * 60 * np.arange(6)
-        by_dow.plot(xticks=ticks, style=style, title='Averaged on Days of the Week')
-        plt.show()
+#        by_dow.plot(xticks=ticks, style=style, title='Averaged on Days of the Week')
+#        plt.show()
 
     def fit(self):
         if self.model == Models.PROPHET:
