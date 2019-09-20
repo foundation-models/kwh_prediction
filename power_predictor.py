@@ -269,7 +269,7 @@ class PowerForecaster:
         elif self.model == Models.VAR:
             predicted_array = self.model_fit.forecast(self.model_fit.y, period)
             predicted = pd.DataFrame(predicted_array)
-            predicted.columns = ['y','x']#ColumnNames.FEATURES.value
+            predicted.columns = ColumnNames.FEATURES.value
             predicted.index = self.test_y.index[:len(predicted)]
         elif self.model == Models.LSTM:
             predicted = self.model.value.predict(self.test_X)
