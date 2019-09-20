@@ -248,8 +248,9 @@ class PowerForecaster:
             predicted = self.model.value.predict(self.future)
             predicted[ColumnNames.VALUE.value] = predicted[ColumnNames.FORECASTED_VALUE.value]
         elif self.model == Models.ARIMA:
-            start = str(self.test_y.index[0])
+            start = str(self.train_y.index[-2])
             end = str(self.test_y.index[Constants.DEFAULT_FUTURE_PERIODS.value])
+            print(start, end)
             predicted = self.model_fit.predict(start=start, end=end, dynamic=True)
         elif self.model == Models.LSTM:
             predicted = self.model.value.predict(self.test_X)
