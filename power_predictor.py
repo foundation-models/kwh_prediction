@@ -225,7 +225,9 @@ class PowerForecaster:
             predicted = self.model.value.predict(self.future)
             predicted[ColumnNames.VALUE.value] = predicted[ColumnNames.FORECASTED_VALUE.value]
         elif self.model == Models.SARIMAX:
-            predicted = self.model_fit.predict(start="2013-1-12", end="2013-1-14", dynamic=True)
+            start = str(self.test_y.index[0])
+            end = str(self.test_y.index[Constants.DEFAULT_FUTURE_PERIODS])
+            predicted = self.model_fit.predict(start=start, end=end, dynamic=True)
         elif self.model == Models.LSTM:
             predicted = self.model.value.predict(self.test_X)
         else:
