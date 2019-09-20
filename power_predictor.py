@@ -12,17 +12,13 @@ import statsmodels.api as sm
 from statsmodels.tsa.vector_ar.var_model import VAR
 from statsmodels.tsa.vector_ar.vecm import coint_johansen
 
-from utility import facebook_prophet_filter, \
-    normalize, series_to_supervised, \
-    explore_data, calculate_errors, lstm_model
+from model_util import facebook_prophet_filter, lstm_model, Callbacks
+from utility import normalize, series_to_supervised, \
+    explore_data, calculate_errors
 
 
 class Constants(Enum):
     TRAIN_TEST_SPLIT_RATIO = 0.1
-    WINDOW_TIME_STEPS = 4
-    FEATURE_SIZE = 3
-    EPOCHS = 5  # for lstm
-    BATCH_SIZE = 72  # for lstm
     CUTOFF_DATE = pd.to_datetime('2013-12-01') # to trim data
     FORECASTED_TEMPERATURE_FILE = 'data/t.df' # to save/load interpolated result
     #FORECASTED_TEMPERATURE_URL = 'https://drive.google.com/uc?export=download&id=1z2MBYJ8k4M5J3udlFVc2d8opE_f-S4BK'
@@ -31,6 +27,13 @@ class Constants(Enum):
     # define model configuration
     SARIMAX_ORDER = (7, 1, 7)
     SARIMAX_SEASONAL_ORDER = (0, 0, 0, 0, 12)
+    # the following is for lstm model
+    WINDOW_TIME_STEPS = 4
+    FEATURE_SIZE = 3
+    EPOCHS = 5
+    INITIAL_EPOCH = 0
+    BATCH_SIZE = 72
+    MODEL_NAME = 'lstm'
 
 
 class ColumnNames(Enum):
@@ -207,33 +210,68 @@ class PowerForecaster:
 
     def fit(self):
         if self.model == Models.PROPHET:
-            past = self.train_y.copy()
-            past[ColumnNames.DATE_STAMP.value] = self.train_y.index
-            self.model.value.fit(past)
+            self.prophet_fit()
         elif self.model == Models.ARIMA:
-            model = sm.tsa.statespace.SARIMAX(self.train_y,
-                                              order=Constants.SARIMAX_ORDER.value,
-                                              seasonal_order=Constants.SARIMAX_SEASONAL_ORDER.value)
-            # ,enforce_stationarity=False, enforce_invertibility=False, freq='15T')
-            print("SARIMAX fitting ....")
-            self.model_fit = model.fit()
-            self.model_fit.summary()
-
-            print("SARIMAX forecast", self.model_fit.forecast())
+            self.arima_fit()
         elif self.model == Models.VAR:
-            print("making VAR model")
-            model = VAR(endog=self.train_X[ColumnNames.FEATURES.value].dropna())
-            print("VAR fitting ....")
-            self.model_fit = model.fit()
-            self.model_fit.summary()
+            self.var_fit()
         elif self.model == Models.LSTM:
-            history_object = self.model.value.fit(self.train_X, self.train_y, epochs=Constants.EPOCHS.value,
-                                                  batch_size=Constants.BATCH_SIZE.value,
-                                                  validation_data=(self.test_X, self.test_y), verbose=2, shuffle=False)
-            if history_object is not None:
-                self.history = history_object.history
+            self.lstm_fit_simple()
         else:
             raise ValueError("{} is not defined".format(self.model))
+
+    def prophet_fit(self):
+        past = self.train_y.copy()
+        past[ColumnNames.DATE_STAMP.value] = self.train_y.index
+        self.model.value.fit(past)
+
+    def arima_fit(self):
+        model = sm.tsa.statespace.SARIMAX(self.train_y,
+                                          order=Constants.SARIMAX_ORDER.value,
+                                          seasonal_order=Constants.SARIMAX_SEASONAL_ORDER.value)
+        # ,enforce_stationarity=False, enforce_invertibility=False, freq='15T')
+        print("SARIMAX fitting ....")
+        self.model_fit = model.fit()
+        self.model_fit.summary()
+        print("SARIMAX forecast", self.model_fit.forecast())
+
+    def var_fit(self):
+        print("making VAR model")
+        model = VAR(endog=self.train_X[ColumnNames.FEATURES.value].dropna())
+        print("VAR fitting ....")
+        self.model_fit = model.fit()
+        self.model_fit.summary()
+
+    def lstm_fit_simple(self):
+        history_object = self.model.value.fit(self.train_X, self.train_y, epochs=Constants.EPOCHS.value,
+                                              batch_size=Constants.BATCH_SIZE.value,
+                                              validation_data=(self.test_X, self.test_y), verbose=2, shuffle=False)
+        if history_object is not None:
+            self.history = history_object.history
+
+    def lstm_fit(self):
+        epochs = Constants.EPOCHS.value
+        batch_size = Constants.BATCH_SIZE.value
+        model = Models.LSTM.value
+        initial_epoch = Constants.INITIAL_EPOCH.value
+        callbacks = Callbacks(Constants.MODEL_NAME.value, batch_size, epochs)
+
+        history = model.fit(
+            self.train_X,
+            self.train_y,
+            epochs=epochs,
+            batch_size=batch_size,
+            validation_split=0.35,
+            verbose=0,
+            callbacks=callbacks.getDefaultCallbacks(),
+            initial_epoch=initial_epoch,
+
+        )
+
+        print(model.summary())
+        plt.plot(np.arange(epochs - initial_epoch), history.history['loss'], label='train')
+        plt.plot(np.arange(epochs - initial_epoch), history.history['val_loss'], label='validation')
+        plt.legend()
 
     def predict(self):
         period = Constants.DEFAULT_FUTURE_PERIODS.value
@@ -246,19 +284,27 @@ class PowerForecaster:
             predicted = self.model.value.predict(self.future)
             predicted[ColumnNames.LABEL.value] = predicted[ColumnNames.FORECAST.value]
         elif self.model == Models.ARIMA:
-            end = str(self.train_y.index[-1])
-            start = str(self.train_y.index[-period])
-            print(start, end)
-            predicted = self.model_fit.predict(start=start[:10], end=end[:10], dynamic=True)
+            predicted = self.arima_predict(period)
         elif self.model == Models.VAR:
-            predicted_array = self.model_fit.forecast(self.model_fit.y, period)
-            predicted = pd.DataFrame(predicted_array)
-            predicted.columns = ColumnNames.FEATURES.value
-            predicted.index = self.test_y.index[:len(predicted)]
+            predicted = self.var_predict(period)
         elif self.model == Models.LSTM:
             predicted = self.model.value.predict(self.test_X)
         else:
             raise ValueError("{} is not defined".format(self.model))
+        return predicted
+
+    def arima_predict(self, period):
+        end = str(self.train_y.index[-1])
+        start = str(self.train_y.index[-period])
+        print(start, end)
+        predicted = self.model_fit.predict(start=start[:10], end=end[:10], dynamic=True)
+        return predicted
+
+    def var_predict(self, period):
+        predicted_array = self.model_fit.forecast(self.model_fit.y, period)
+        predicted = pd.DataFrame(predicted_array)
+        predicted.columns = ColumnNames.FEATURES.value
+        predicted.index = self.test_y.index[:len(predicted)]
         return predicted
 
     def sliding_window(self):

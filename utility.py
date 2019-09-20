@@ -5,33 +5,6 @@ import fbprophet
 import pandas as pd
 from sklearn.metrics import mean_squared_error
 from sklearn.preprocessing import QuantileTransformer
-from tensorflow.python.keras import Sequential
-from tensorflow.python.keras.layers import LSTM, Dense, Conv1D
-
-
-def lstm_conv1d_model(input_shape):
-    model = Sequential()
-    model.add(Conv1D(filters=10,
-           kernel_size=20,
-           strides=5,
-           activation='relu',
-           padding='same',
-           input_shape=input_shape))
-    model.add(LSTM(64, return_sequences=True))
-    model.add(LSTM(64))
-    model.add(Dense(1))
-    model.build()
-    model.compile(loss='mse', optimizer='adam', metrics=['mae'])
-    return model
-
-
-def lstm_model(neurons, input_shape):
-    model = Sequential()
-    model.add(LSTM(neurons, input_shape=input_shape))
-    model.add(Dense(1))
-    model.compile(loss='mse', optimizer='adam', metrics=['mae'])
-    return model
-
 
 def calculate_errors(y_actual, y_predicted):
     rmse = sqrt(mean_squared_error(y_actual, y_predicted))
@@ -92,26 +65,6 @@ def series_to_supervised(data, feature_columns, label_column, n_in=1, n_out=1, d
     if dropnan:
         agg.dropna(inplace=True)
     return agg
-
-
-def facebook_prophet_filter(df, column_name, dump_file=None):
-    if dump_file is not None:
-        try:
-            with open(dump_file, 'rb') as file:
-                return pickle.load(file)
-        except FileNotFoundError:
-            pass
-    prophet = fbprophet.Prophet(changepoint_prior_scale=0.10, yearly_seasonality=True)
-    # this is a time series data, make a timestamp index for future analysis
-    df['ds'] = df.index
-    # rename this column for facebook prophet
-    df = df.rename(columns={column_name: 'y'})
-    prophet.fit(df)
-    prophesied = prophet.predict(df)
-    if dump_file is not None:
-        with open(df, "wb") as file:
-            pickle.dump(prophesied, file)
-    return prophesied
 
 
 def explore_data(df):
