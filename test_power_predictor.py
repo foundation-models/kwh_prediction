@@ -24,7 +24,7 @@ class TestPowerForecaster(TestCase):
         self.test_class.lstm_preprocess()
         self.test_class.fit()
 
-    def test_agg_plot(self):
+    def test_visual_inspection(self):
         self.test_class = PowerForecaster(self.df)
         self.test_class.visual_inspection()
         ans = input("Do plots look ok (yes/no):? ")

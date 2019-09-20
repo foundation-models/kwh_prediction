@@ -38,7 +38,6 @@ def lstm_model(neurons, input_shape):
     model.compile(loss='mse', optimizer='adam', metrics=['mae'])
     return model
 
-
 def facebook_prophet_filter(df, column_name, dump_file=None):
     if dump_file is not None:
         try:
@@ -46,21 +45,17 @@ def facebook_prophet_filter(df, column_name, dump_file=None):
                 return pickle.load(file)
         except FileNotFoundError:
             pass
-    model = fbprophet.Prophet(changepoint_prior_scale=0.10, yearly_seasonality=True)
+    prophet = fbprophet.Prophet(changepoint_prior_scale=0.10, yearly_seasonality=True)
     # this is a time series data, make a timestamp index for future analysis
     df['ds'] = df.index
     # rename this column for facebook prophet
     df = df.rename(columns={column_name: 'y'})
-    model.fit(df)
-    interpolated = model.predict(df)
-    interpolated.index = df.index
-    df[column_name] = interpolated['yhat']
-
+    prophet.fit(df)
+    interpolated = prophet.predict(df)
     if dump_file is not None:
         with open(dump_file, "wb") as file:
             pickle.dump(interpolated, file)
-    #return df
-
+    return interpolated
 
 
 # Display training progress by printing a single dot for each completed epoch
