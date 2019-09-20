@@ -5,6 +5,33 @@ import fbprophet
 import pandas as pd
 from sklearn.metrics import mean_squared_error
 from sklearn.preprocessing import QuantileTransformer
+from tensorflow.python.keras import Sequential
+from tensorflow.python.keras.layers import LSTM, Dense, Conv1D
+
+
+def lstm_conv1d_model(input_shape):
+    model = Sequential()
+    model.add(Conv1D(filters=10,
+           kernel_size=20,
+           strides=5,
+           activation='relu',
+           padding='same',
+           input_shape=input_shape))
+    model.add(LSTM(64, return_sequences=True))
+    model.add(LSTM(64))
+    model.add(Dense(1))
+    model.build()
+    model.compile(loss='mse', optimizer='adam', metrics=['mae'])
+    return model
+
+
+def lstm_model(neurons, input_shape):
+    model = Sequential()
+    model.add(LSTM(neurons, input_shape=input_shape))
+    model.add(Dense(1))
+    model.compile(loss='mse', optimizer='adam', metrics=['mae'])
+    return model
+
 
 def calculate_errors(y_actual, y_predicted):
     rmse = sqrt(mean_squared_error(y_actual, y_predicted))

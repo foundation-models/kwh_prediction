@@ -10,21 +10,11 @@ from sklearn.model_selection import TimeSeriesSplit
 from sklearn.preprocessing import QuantileTransformer
 import statsmodels.api as sm
 from statsmodels.tsa.vector_ar.var_model import VAR
-from tensorflow.python.keras import Sequential
-from tensorflow.python.keras.layers import LSTM, Dense
 from statsmodels.tsa.vector_ar.vecm import coint_johansen
 
 from utility import facebook_prophet_filter, \
     normalize, series_to_supervised, \
-    explore_data, calculate_errors
-
-
-def get_LSTM_model(neurons, input_shape):
-    model = Sequential()
-    model.add(LSTM(neurons, input_shape=input_shape))
-    model.add(Dense(1))
-    model.compile(loss='mae', optimizer='adam')
-    return model
+    explore_data, calculate_errors, lstm_model
 
 
 class Constants(Enum):
@@ -33,11 +23,11 @@ class Constants(Enum):
     FEATURE_SIZE = 3
     EPOCHS = 5  # for lstm
     BATCH_SIZE = 72  # for lstm
-    CUTOFF_DATE = pd.to_datetime('2013-12-01')
-    FORECASTED_TEMPERATURE_FILE = 'data/t.df'
-    FORECASTED_TEMPERATURE_URL = 'https://drive.google.com/uc?export=download&id=1z2MBYJ8k4M5J3udlFVc2d8opE_f-S4BK'
+    CUTOFF_DATE = pd.to_datetime('2013-12-01') # to trim data
+    FORECASTED_TEMPERATURE_FILE = 'data/t.df' # to save/load interpolated result
+    #FORECASTED_TEMPERATURE_URL = 'https://drive.google.com/uc?export=download&id=1z2MBYJ8k4M5J3udlFVc2d8opE_f-S4BK'
     DEFAULT_FUTURE_PERIODS = 4 * 24 * 10  # with freq = 15 * 60  that is  1 day
-    DEFAULT_FUTURE_FREQ = '15T'  # frequency of recording power
+    DEFAULT_FUTURE_FREQ = '15T'  # frequency of recording power, 15 minutes
     # define model configuration
     SARIMAX_ORDER = (7, 1, 7)
     SARIMAX_SEASONAL_ORDER = (0, 0, 0, 0, 12)
@@ -46,8 +36,8 @@ class Constants(Enum):
 class ColumnNames(Enum):
     POWER = 'actual_kwh'
     TEMPERATURE = 'actual_temperature'
-    LABEL = 'y'  # Facebook Prophet requires this name and it should be numeric
-    FORECAST = 'yhat'
+    LABEL = 'y'  # FbProphet & VAR use this name and it should be numeric
+    FORECAST = 'yhat'  # FbProphet & VAR use this name and it should be numeric
     DATE = 'date'
     TIME = 'time'
     DATE_STAMP = 'ds'  # Facebook Prophet requires this name
@@ -58,7 +48,7 @@ class ColumnNames(Enum):
 
 class Models(Enum):
     PROPHET = fbprophet.Prophet(changepoint_prior_scale=0.10, yearly_seasonality=True)
-    LSTM = get_LSTM_model(10, (Constants.WINDOW_TIME_STEPS.value, Constants.FEATURE_SIZE.value))
+    LSTM = lstm_model(10, (Constants.WINDOW_TIME_STEPS.value, Constants.FEATURE_SIZE.value))
     ARIMA = sm.tsa.statespace.SARIMAX
     VAR = VAR
 
@@ -81,10 +71,11 @@ class PowerForecaster:
         self.df_original = df.copy()
 
         # we interpolate temperature using prophet to use it as a multivariate forecast
-        interpolated_df = facebook_prophet_filter(df, ColumnNames.TEMPERATURE.value,
+        temperature = ColumnNames.TEMPERATURE.value
+        interpolated_df = facebook_prophet_filter(df, temperature,
                                                   Constants.FORECASTED_TEMPERATURE_FILE.value)
         interpolated_df.index = df.index
-        df[[ColumnNames.TEMPERATURE.value]] = interpolated_df[[ColumnNames.FORECAST.value]]
+        df[[temperature]] = interpolated_df[[ColumnNames.FORECAST.value]]
 
         # now turn to kwh and make the format compatible with prophet
         df = df.rename(columns={ColumnNames.POWER.value: ColumnNames.LABEL.value})
@@ -244,13 +235,6 @@ class PowerForecaster:
         else:
             raise ValueError("{} is not defined".format(self.model))
 
-    def plot_prediction(self, predicted):
-        style = [':', '--', '-']
-        pd.plotting.register_matplotlib_converters()
-        label_column = ColumnNames.LABELS.value
-        plt.plot(predicted.index, self.test_y[label_column].iloc[:len(predicted)], predicted[label_column])
-        plt.show()
-
     def predict(self):
         period = Constants.DEFAULT_FUTURE_PERIODS.value
         if self.model == Models.PROPHET:
@@ -277,9 +261,10 @@ class PowerForecaster:
             raise ValueError("{} is not defined".format(self.model))
         return predicted
 
-    def process(self, window_size):
+    def sliding_window(self):
         # Generate the data matrix      
         length0 = self.df.shape[0]
+        window_size = Constants.WINDOW_TIME_STEPS
         sliding_window_data = np.zeros((length0 - window_size, window_size))
         sliding_window_label = np.zeros((length0 - window_size, 1))
         label_column = ColumnNames.LABEL.value
@@ -294,7 +279,7 @@ class PowerForecaster:
         print("sliding window length", length)
         idx = np.random.choice(length, length, replace=False)
         
-        frac = Constants.WINDOW_TIME_STEPS.value
+        frac = Constants.TRAIN_TEST_SPLIT_RATIO.value
         #if not self.random:
         idx = np.arange(length)
         self.val_idx = idx[int( * length):]
@@ -337,6 +322,13 @@ class PowerForecaster:
     def plot_future(self, predicted):
         self.model.value.plot(predicted, xlabel='Date', ylabel='KWH')
         self.model.value.plot_components(predicted)
+
+    def plot_prediction(self, predicted):
+        style = [':', '--', '-']
+        pd.plotting.register_matplotlib_converters()
+        label_column = ColumnNames.LABELS.value
+        plt.plot(predicted.index, self.test_y[label_column].iloc[:len(predicted)], predicted[label_column])
+        plt.show()
 
     def plot_history(self):
         plt.plot(self.history['loss'])
