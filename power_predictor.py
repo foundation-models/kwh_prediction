@@ -231,10 +231,11 @@ class PowerForecaster:
             print("SARIMAX forecast", self.model_fit.forecast())
         elif self.model == Models.VAR:
             print("making VAR model")
-            model = VAR(endog=self.train_X[ColumnNames.FEATURES.value])
+            #model = VAR(endog=self.train_X[ColumnNames.FEATURES.value].dropna())
+            model = VAR(endog=self.train_y)
             print("VAR fitting ....")
             self.model_fit = model.fit()
-            self.model_fit.summary()
+            #self.model_fit.summary()
             print("VAR forecast", self.model_fit.forecast())
         elif self.model == Models.LSTM:
             history_object = self.model.value.fit(self.train_X, self.train_y, epochs=Constants.EPOCHS.value,
