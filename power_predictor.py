@@ -11,6 +11,7 @@ from sklearn.metrics import mean_squared_error
 from sklearn.model_selection import TimeSeriesSplit
 from sklearn.preprocessing import QuantileTransformer
 import statsmodels.api as sm
+from statsmodels.tsa.vector_ar.var_model import VAR
 from tensorflow.python.keras import Sequential
 from tensorflow.python.keras.layers import LSTM, Dense
 from statsmodels.tsa.vector_ar.vecm import coint_johansen
@@ -57,6 +58,7 @@ class Models(Enum):
     PROPHET = fbprophet.Prophet(changepoint_prior_scale=0.10, yearly_seasonality=True)
     LSTM = get_LSTM_model(10, (Constants.WINDOW_TIME_STEPS.value, Constants.FEATURE_SIZE.value))
     ARIMA = sm.tsa.statespace.SARIMAX
+    VAR = VAR
 
 
 class PowerForecaster:
@@ -247,7 +249,7 @@ class PowerForecaster:
             predicted[ColumnNames.VALUE.value] = predicted[ColumnNames.FORECASTED_VALUE.value]
         elif self.model == Models.ARIMA:
             start = str(self.test_y.index[0])
-            end = str(self.test_y.index[Constants.DEFAULT_FUTURE_PERIODS])
+            end = str(self.test_y.index[Constants.DEFAULT_FUTURE_PERIODS.value])
             predicted = self.model_fit.predict(start=start, end=end, dynamic=True)
         elif self.model == Models.LSTM:
             predicted = self.model.value.predict(self.test_X)
