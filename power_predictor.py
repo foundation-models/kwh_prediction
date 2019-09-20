@@ -25,7 +25,7 @@ def get_LSTM_model(neurons, input_shape):
 
 
 class Constants(Enum):
-    TRAIN_TEST_SPLIT_RATIO = 0.2
+    TRAIN_TEST_SPLIT_RATIO = 0.5
     WINDOW_TIME_STEPS = 4
     FEATURE_SIZE = 3
     EPOCHS = 5  # for lstm
