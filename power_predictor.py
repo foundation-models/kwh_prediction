@@ -217,8 +217,8 @@ class PowerForecaster:
         elif self.model == Models.ARIMA:
             model = sm.tsa.statespace.SARIMAX(self.train_y,
                                                       order=Constants.SARIMAX_ORDER.value,
-                                                      seasonal_order=Constants.SARIMAX_SEASONAL_ORDER.value,
-                                                enforce_stationarity=False, enforce_invertibility=False, freq='15T')
+                                                      seasonal_order=Constants.SARIMAX_SEASONAL_ORDER.value)
+                                               # ,enforce_stationarity=False, enforce_invertibility=False, freq='15T')
             print("SARIMAX fitting ....")
             self.model_fit = model.fit()
             model.summary()
