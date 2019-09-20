@@ -223,7 +223,7 @@ class PowerForecaster:
                                                # ,enforce_stationarity=False, enforce_invertibility=False, freq='15T')
             print("SARIMAX fitting ....")
             self.model_fit = model.fit()
-            model.summary()
+            self.model_fit.summary()
         elif self.model == Models.LSTM:
             history_object = self.model.value.fit(self.train_X, self.train_y, epochs=Constants.EPOCHS.value,
                                                   batch_size=Constants.BATCH_SIZE.value,
