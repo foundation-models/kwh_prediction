@@ -274,9 +274,9 @@ class PowerForecaster:
         plt.legend()
 
     def predict(self):
-        period = Constants.DEFAULT_FUTURE_PERIODS.value
+        periods = Constants.DEFAULT_FUTURE_PERIODS.value
         if self.model == Models.PROPHET:
-            self.future = self.model.value.make_future_dataframe(period=period,
+            self.future = self.model.value.make_future_dataframe(periods=periods,
                                                                  freq=Constants.DEFAULT_FUTURE_FREQ.value,
                                                                  include_history=False)
 
