@@ -274,9 +274,9 @@ class PowerForecaster:
         plt.legend()
 
     def predict(self):
-        periods = Constants.DEFAULT_FUTURE_PERIODS.value
+        future = Constants.DEFAULT_FUTURE_PERIODS.value
         if self.model == Models.PROPHET:
-            self.future = self.model.value.make_future_dataframe(periods=periods,
+            self.future = self.model.value.make_future_dataframe(periods=future,
                                                                  freq=Constants.DEFAULT_FUTURE_FREQ.value,
                                                                  include_history=False)
 
@@ -284,24 +284,24 @@ class PowerForecaster:
             predicted = self.model.value.predict(self.future)
             predicted[ColumnNames.LABEL.value] = predicted[ColumnNames.FORECAST.value]
         elif self.model == Models.ARIMA:
-            predicted = self.arima_predict(period)
+            predicted = self.arima_predict(future)
         elif self.model == Models.VAR:
-            predicted = self.var_predict(period)
+            predicted = self.var_predict(future)
         elif self.model == Models.LSTM:
             predicted = self.model.value.predict(self.test_X)
         else:
             raise ValueError("{} is not defined".format(self.model))
         return predicted
 
-    def arima_predict(self, period):
+    def arima_predict(self, future):
         end = str(self.train_y.index[-1])
-        start = str(self.train_y.index[-period])
+        start = str(self.train_y.index[-future])
         print(start, end)
         predicted = self.model_fit.predict(start=start[:10], end=end[:10], dynamic=True)
         return predicted
 
-    def var_predict(self, period):
-        predicted_array = self.model_fit.forecast(self.model_fit.y, period)
+    def var_predict(self, future):
+        predicted_array = self.model_fit.forecast(self.model_fit.y, future)
         predicted = pd.DataFrame(predicted_array)
         predicted.columns = ColumnNames.FEATURES.value
         predicted.index = self.test_y.index[:len(predicted)]
