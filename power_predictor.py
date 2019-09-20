@@ -26,7 +26,7 @@ def get_LSTM_model(neurons, input_shape):
 
 
 class Constants(Enum):
-    TRAIN_TEST_SPLIT_RATIO = 0.8
+    TRAIN_TEST_SPLIT_RATIO = 0.1
     WINDOW_TIME_STEPS = 4
     FEATURE_SIZE = 3
     EPOCHS = 5  # for lstm
@@ -38,7 +38,7 @@ class Constants(Enum):
     DEFAULT_FUTURE_FREQ = '15T'  # frequency of recording power
     # define model configuration
     SARIMAX_ORDER = (7, 1, 7)
-    SARIMAX_SEASONAL_ORDER = (1, 1, 1, 12)
+    SARIMAX_SEASONAL_ORDER = (0, 0, 0, 0, 12)
 
 
 class ColumnNames(Enum):
