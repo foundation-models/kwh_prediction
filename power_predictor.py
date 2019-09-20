@@ -1,5 +1,3 @@
-import logging
-import pickle
 from enum import Enum
 from math import sqrt
 
@@ -15,6 +13,10 @@ from statsmodels.tsa.vector_ar.var_model import VAR
 from tensorflow.python.keras import Sequential
 from tensorflow.python.keras.layers import LSTM, Dense
 from statsmodels.tsa.vector_ar.vecm import coint_johansen
+
+from utility import facebook_prophet_filter, \
+    normalize, series_to_supervised, \
+    explore_data, calculate_errors
 
 
 def get_LSTM_model(neurons, input_shape):
@@ -34,7 +36,7 @@ class Constants(Enum):
     CUTOFF_DATE = pd.to_datetime('2013-12-01')
     FORECASTED_TEMPERATURE_FILE = 'data/t.df'
     FORECASTED_TEMPERATURE_URL = 'https://drive.google.com/uc?export=download&id=1z2MBYJ8k4M5J3udlFVc2d8opE_f-S4BK'
-    DEFAULT_FUTURE_PERIODS = 4 * 24 * 10 # with freq = 15 * 60  that is  1 day
+    DEFAULT_FUTURE_PERIODS = 4 * 24 * 10  # with freq = 15 * 60  that is  1 day
     DEFAULT_FUTURE_FREQ = '15T'  # frequency of recording power
     # define model configuration
     SARIMAX_ORDER = (7, 1, 7)
@@ -127,7 +129,8 @@ class PowerForecaster:
         _train_X, self.train_y = train.iloc[:, :-1], train.iloc[:, -1]
         _test_X, self.test_y = test.iloc[:, :-1], test.iloc[:, -1]
         # reshape input to be 3D [samples, timesteps, features]
-        self.train_X = _train_X.values.reshape((_train_X.shape[0], Constants.WINDOW_TIME_STEPS.value, _train_X.shape[1]))
+        self.train_X = _train_X.values.reshape(
+            (_train_X.shape[0], Constants.WINDOW_TIME_STEPS.value, _train_X.shape[1]))
         self.test_X = _test_X.values.reshape((_test_X.shape[0], Constants.WINDOW_TIME_STEPS.value, _test_X.shape[1]))
         print(self.train_X.shape, self.train_y.shape, self.test_X.shape, self.test_y.shape)
 
@@ -218,9 +221,9 @@ class PowerForecaster:
             self.model.value.fit(past)
         elif self.model == Models.ARIMA:
             model = sm.tsa.statespace.SARIMAX(self.train_y,
-                                                      order=Constants.SARIMAX_ORDER.value,
-                                                      seasonal_order=Constants.SARIMAX_SEASONAL_ORDER.value)
-                                               # ,enforce_stationarity=False, enforce_invertibility=False, freq='15T')
+                                              order=Constants.SARIMAX_ORDER.value,
+                                              seasonal_order=Constants.SARIMAX_SEASONAL_ORDER.value)
+            # ,enforce_stationarity=False, enforce_invertibility=False, freq='15T')
             print("SARIMAX fitting ....")
             self.model_fit = model.fit()
             self.model_fit.summary()
@@ -243,7 +246,8 @@ class PowerForecaster:
     def predict(self):
         if self.model == Models.PROPHET:
             self.future = self.model.value.make_future_dataframe(Constants.DEFAULT_FUTURE_PERIODS.value,
-                                                            freq=Constants.DEFAULT_FUTURE_FREQ.value, include_history=False)
+                                                                 freq=Constants.DEFAULT_FUTURE_FREQ.value,
+                                                                 include_history=False)
         if self.model == Models.PROPHET:
             predicted = self.model.value.predict(self.future)
             predicted[ColumnNames.VALUE.value] = predicted[ColumnNames.FORECASTED_VALUE.value]
@@ -308,117 +312,3 @@ class ModelEvaluator:
             size = len(y_test)
             plt.xlim(size - 1000, size)
             plt.show()
-
-
-def calculate_errors(y_actual, y_predicted):
-    rmse = sqrt(mean_squared_error(y_actual, y_predicted))
-    return rmse
-
-
-# Holts Winter method
-"""
-y_hat_avg = test.copy()
-fit1 = ExponentialSmoothing(np.asarray(train['Count']), seasonal_periods=7, trend='add', seasonal='add', ).fit()
-y_hat_avg['Holt_Winter'] = fit1.forecast(len(test))
-plt.figure(figsize=(16, 8))
-plt.plot(self.train['Count'], label='Train')
-plt.plot(test['Count'], label='Test')
-plt.plot(y_hat_avg['Holt_Winter'], label='Holt_Winter')
-plt.legend(loc='best')
-plt.show()
-"""
-
-
-def normalize(df, columns, transformer=QuantileTransformer()):
-    """
-    Normalizing all feature and label sets
-    :param df:
-    :param columns: Columns to be normalized
-    :return: Normalized dataframe
-    """
-    scaled_one = transformer.fit_transform(df[columns])
-    df_scaled = pd.DataFrame(df)
-    df_scaled[columns] = scaled_one
-    return df_scaled
-
-
-def resample_data(df, columns, freq='H'):
-    assert isinstance(df, pd.DataFrame)
-    assert isinstance(columns, list)
-    sub_df = df  # [columns]
-    resampled = sub_df.resample(freq)
-    return resampled.interpolate(method='spline', order=2)
-
-
-# convert series to supervised learning
-def series_to_supervised(data, feature_columns, label_column, n_in=1, n_out=1, dropnan=True):
-    """
-    Frame a time series as a supervised learning dataset.
-    Arguments:
-    	data: Sequence of observations as a list or NumPy array.
-    	n_in: Number of lag observations as input (X).
-    	n_out: Number of observations as output (y).
-    	dropnan: Boolean whether or not to drop rows with NaN values.
-    Returns:
-        Pandas DataFrame of series framed for supervised learning.
-    """
-    n_vars = 1 if type(data) is list else data.shape[1]
-    df = pd.DataFrame(data)
-    cols, names = list(), list()
-    # input sequence (t-n, ... t-1)
-    for i in range(n_in, 0, -1):
-        cols.append(df.shift(i))
-        names += [('x{}(t-{})'.format(j + 1, i)) for j in range(n_vars)]
-    # forecast sequence (t, t+1, ... t+n)
-    for i in range(0, n_out):
-        #  cols.append(df[[label_column]].shift(-i))
-        cols.append(df.shift(-i))
-        if i == 0:
-            names += [('y{}(t)'.format(j + 1)) for j in range(n_vars)]
-        else:
-            names += [('y{}(t+{})'.format(j + 1, i)) for j in range(n_vars)]
-    # put it all together
-    agg = pd.concat(cols, axis=1)
-    agg.columns = names
-    # drop rows with NaN values
-    if dropnan:
-        agg.dropna(inplace=True)
-    return agg
-
-
-def facebook_prophet_filter(df, column_name, dump_file=None):
-    if dump_file is not None:
-        try:
-            with open(dump_file, 'rb') as file:
-                return pickle.load(file)
-        except FileNotFoundError:
-            pass
-    prophet = fbprophet.Prophet(changepoint_prior_scale=0.10, yearly_seasonality=True)
-    # this is a time series data, make a timestamp index for future analysis
-    df[ColumnNames.DATE_STAMP.value] = df.index
-    # rename this column for facebook prophet
-    df = df.rename(columns={column_name: ColumnNames.VALUE.value})
-    prophet.fit(df)
-    prophesied = prophet.predict(df)
-    if dump_file is not None:
-        with open(df, "wb") as file:
-            pickle.dump(prophesied, file)
-    return prophesied
-
-
-def explore_data(df):
-    separator = '_' * 100
-    print("First 3 rows:", df.head(3))
-    print(separator)
-    print("Sample of one element", df.iloc[0])
-    print(separator)
-    print("Dataframe index: ", df.index)
-    print(separator)
-    print("Is there null values in the data?", df.isnull().values.any())
-    print("Columns with missing values: ", df.columns[df.isnull().any()])
-    print("Columns with no value at all: ", df.columns[(df == 0).all()])
-    print(separator)
-    print(df.describe())
-    print(separator)
-    print("Shape:", df.shape)
-    print("Columns:", df.columns)
