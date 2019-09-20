@@ -21,7 +21,6 @@ class Constants(Enum):
     TRAIN_TEST_SPLIT_RATIO = 0.1
     CUTOFF_DATE = pd.to_datetime('2013-12-01') # to trim data
     FORECASTED_TEMPERATURE_FILE = 'data/t.df' # to save/load interpolated result
-    #FORECASTED_TEMPERATURE_URL = 'https://drive.google.com/uc?export=download&id=1z2MBYJ8k4M5J3udlFVc2d8opE_f-S4BK'
     DEFAULT_FUTURE_PERIODS = 4 * 24 * 10  # with freq = 15 * 60  that is  1 day
     DEFAULT_FUTURE_FREQ = '15T'  # frequency of recording power, 15 minutes
     # define model configuration
@@ -73,12 +72,10 @@ class PowerForecaster:
         # keep a copy of original dataset for future comparison
         self.df_original = df.copy()
 
-        # we interpolate temperature using prophet to use it as a multivariate forecast
+        # we interpolate temperature using prophet to use it in a multivariate forecast
         temperature = ColumnNames.TEMPERATURE.value
-        interpolated_df = facebook_prophet_filter(df, temperature,
+        facebook_prophet_filter(df, ColumnNames.TEMPERATURE.value,
                                                   Constants.FORECASTED_TEMPERATURE_FILE.value)
-        interpolated_df.index = df.index
-        df[[temperature]] = interpolated_df[[ColumnNames.FORECAST.value]]
 
         # now turn to kwh and make the format compatible with prophet
         df = df.rename(columns={ColumnNames.POWER.value: ColumnNames.LABEL.value})
