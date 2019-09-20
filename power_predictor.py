@@ -56,7 +56,7 @@ class ColumnNames(Enum):
 class Models(Enum):
     PROPHET = fbprophet.Prophet(changepoint_prior_scale=0.10, yearly_seasonality=True)
     LSTM = get_LSTM_model(10, (Constants.WINDOW_TIME_STEPS.value, Constants.FEATURE_SIZE.value))
-    SARIMAX = sm.tsa.statespace.SARIMAX
+    ARIMA = sm.tsa.statespace.SARIMAX
 
 
 class PowerForecaster:
@@ -195,12 +195,12 @@ class PowerForecaster:
             past = self.train_y.copy()
             past[ColumnNames.DATE_STAMP.value] = self.train_y.index
             self.model.value.fit(past)
-        elif self.model == Models.SARIMAX:
-            self.model.value = sm.tsa.statespace.SARIMAX(self.df[ColumnNames.VALUE.value],
+        elif self.model == Models.ARIMA:
+            model = sm.tsa.statespace.SARIMAX(self.df[ColumnNames.VALUE.value],
                                                       order=Constants.SARIMAX_ORDER.value,
                                                       seasonal_order=Constants.SARIMAX_SEASONAL_ORDER.value)  # , order=(2, 1, 4), seasonal_order=(0, 1, 1, 7))
 
-            self.model_fit = self.model.value.fit()
+            self.model_fit = model.fit()
         elif self.model == Models.LSTM:
             history_object = self.model.value.fit(self.train_X, self.train_y, epochs=Constants.EPOCHS.value,
                                                   batch_size=Constants.BATCH_SIZE.value,
@@ -224,7 +224,7 @@ class PowerForecaster:
         if self.model == Models.PROPHET:
             predicted = self.model.value.predict(self.future)
             predicted[ColumnNames.VALUE.value] = predicted[ColumnNames.FORECASTED_VALUE.value]
-        elif self.model == Models.SARIMAX:
+        elif self.model == Models.ARIMA:
             start = str(self.test_y.index[0])
             end = str(self.test_y.index[Constants.DEFAULT_FUTURE_PERIODS])
             predicted = self.model_fit.predict(start=start, end=end, dynamic=True)
