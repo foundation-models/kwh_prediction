@@ -1,21 +1,21 @@
 import pickle
 
 import fbprophet
-import keras
+from tensorflow import keras
 import pandas as pd
-from keras.models import model_from_json
-from keras.models import model_from_yaml
+from tensorflow.keras.models import model_from_json
+from tensorflow.keras.models import model_from_yaml
 from sklearn.metrics import roc_auc_score
-from keras.callbacks import ModelCheckpoint
-from keras.callbacks import CSVLogger
-from keras.callbacks import ReduceLROnPlateau
-from keras.callbacks import TensorBoard
-from keras.callbacks import EarlyStopping
-from tensorflow.python.keras import Sequential
-from tensorflow.python.keras.layers import LSTM, Dense, Conv1D
+from tensorflow.keras.callbacks import ModelCheckpoint
+from tensorflow.keras.callbacks import CSVLogger
+from tensorflow.keras.callbacks import ReduceLROnPlateau
+from tensorflow.keras.callbacks import TensorBoard
+from tensorflow.keras.callbacks import EarlyStopping
+from tensorflow.keras import Sequential
+from tensorflow.keras.layers import LSTM, Dense, Conv1D
 
 
-def lstm_conv1d_model(input_shape):
+def lstm_conv1d_model(neurons, input_shape):
     model = Sequential()
     model.add(Conv1D(filters=10,
                      kernel_size=20,
@@ -23,8 +23,8 @@ def lstm_conv1d_model(input_shape):
                      activation='relu',
                      padding='same',
                      input_shape=input_shape))
-    model.add(LSTM(64, return_sequences=True))
-    model.add(LSTM(64))
+    model.add(LSTM(neurons, return_sequences=True))
+    model.add(LSTM(neurons))
     model.add(Dense(1))
     model.build()
     model.compile(loss='mse', optimizer='adam', metrics=['mae'])
@@ -63,6 +63,9 @@ class PrintDot(keras.callbacks.Callback):
     def on_epoch_end(self, epoch, logs):
         if epoch % 100 == 0: print('')
         print('.', end='')
+        
+    def on_train_batch_begin(self, *args, **kwargs):
+        pass
 
 
 class Callbacks():

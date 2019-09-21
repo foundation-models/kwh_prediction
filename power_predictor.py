@@ -5,22 +5,22 @@ import fbprophet
 import matplotlib.pylab as plt
 import numpy as np
 import pandas as pd
+import statsmodels.api as sm
 from sklearn.metrics import mean_squared_error
 from sklearn.model_selection import TimeSeriesSplit
 from sklearn.preprocessing import QuantileTransformer
-import statsmodels.api as sm
 from statsmodels.tsa.vector_ar.var_model import VAR
 from statsmodels.tsa.vector_ar.vecm import coint_johansen
 
-from model_util import facebook_prophet_filter, lstm_model, Callbacks
+from model_util import facebook_prophet_filter, Callbacks, lstm_conv1d_model
 from utility import normalize, series_to_supervised, \
     explore_data, calculate_errors
 
 
 class Constants(Enum):
     TRAIN_TEST_SPLIT_RATIO = 0.8
-    CUTOFF_DATE = pd.to_datetime('2013-12-01') # to trim data
-    FORECASTED_TEMPERATURE_FILE = 'data/temp_interpolated_load_temperature_data.pickle' # to save/load interpolated result
+    CUTOFF_DATE = pd.to_datetime('2013-12-01')  # to trim data
+    FORECASTED_TEMPERATURE_FILE = 'data/temp_interpolated_load_temperature_data.pickle'  # to save/load interpolated result
     DEFAULT_FUTURE_PERIODS = 4 * 24 * 10  # with freq = 15 * 60  that is  1 day
     DEFAULT_FUTURE_FREQ = '15T'  # frequency of recording power, 15 minutes
     # define model configuration
@@ -28,7 +28,7 @@ class Constants(Enum):
     SARIMAX_SEASONAL_ORDER = (0, 0, 0, 0, 12)
     # the following is for lstm model
     SLIDING_WINDOW_SIZE = 4
-    FEATURE_SIZE = 3
+    FEATURE_SIZE = 1
     EPOCHS = 5
     INITIAL_EPOCH = 0
     BATCH_SIZE = 72
@@ -50,7 +50,7 @@ class ColumnNames(Enum):
 
 class Models(Enum):
     PROPHET = fbprophet.Prophet(changepoint_prior_scale=0.10, yearly_seasonality=True)
-    LSTM = lstm_model(10, (Constants.SLIDING_WINDOW_SIZE.value, Constants.FEATURE_SIZE.value))
+    LSTM = lstm_conv1d_model(10, (Constants.SLIDING_WINDOW_SIZE.value, Constants.FEATURE_SIZE.value))
     ARIMA = sm.tsa.statespace.SARIMAX
     VAR = VAR
 
@@ -164,7 +164,7 @@ class PowerForecaster:
         return johnsen_test
 
     def seasonal_prediction(self):
-        from statsmodels.tsa.api import ExponentialSmoothing, SimpleExpSmoothing, Holt
+        from statsmodels.tsa.api import SimpleExpSmoothing
         y_hat_avg = self.test_y.copy()
         fit2 = SimpleExpSmoothing(np.asarray(self.train_y['Count'])).fit(smoothing_level=0.6, optimized=False)
         y_hat_avg['SES'] = fit2.forecast(len(self.test_y))
@@ -175,51 +175,6 @@ class PowerForecaster:
         plt.legend(loc='best')
         plt.show()
 
-    def visual_inspection(self):
-        style = [':', '--', '-']
-        pd.plotting.register_matplotlib_converters()
-        df = self.df
-
-        self.df_original[ColumnNames.ORIGINAL_FEATURES.value].plot(style=style, title='Original Data')
-        plt.show()
-
-        self.df[ColumnNames.FEATURES.value].plot(style=style, title='Normalized Data')
-        plt.show()
-
-        sampled = df.resample('M').sum()[ColumnNames.FEATURES.value]
-        sampled.plot(style=style, title='Aggregated Monthly')
-        plt.show()
-
-        sampled = df.resample('W').sum()[ColumnNames.FEATURES.value]
-        sampled.plot(style=style, title='Aggregated Weekly')
-        plt.show()
-
-        sampled = df.resample('D').sum()[ColumnNames.FEATURES.value]
-        sampled.rolling(30, center=True).sum().plot(style=style, title='Aggregated Daily')
-        plt.show()
-
-        by_time = df.groupby(by=df.index.time).mean()[ColumnNames.FEATURES.value]
-        ticks = 4 * 60 * 60 * np.arange(6)
-        by_time.plot(xticks=ticks, style=style, title='Averaged Hourly')
-        plt.show()
-
-        days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
-
-        def tick(x):
-            if x % 24 == 12:
-                return days[int(x) // 24]
-            else:
-                return ""
-
-        #        ax.xaxis.set_major_formatter(NullFormatter())
-        #        ax.xaxis.set_minor_formatter(FuncFormatter(tick))
-        #        ax.tick_params(which="major", axis="x", length=10, width=1.5)
-
-        by_dow = df.groupby(by=df.dow).mean()[ColumnNames.FEATURES.value]
-        ticks = 4 * 60 * 60 * np.arange(6)
-#        by_dow.plot(xticks=ticks, style=style, title='Averaged on Days of the Week')
-#        plt.show()
-
     def fit(self):
         if self.model == Models.PROPHET:
             self.prophet_fit()
@@ -228,7 +183,7 @@ class PowerForecaster:
         elif self.model == Models.VAR:
             self.var_fit()
         elif self.model == Models.LSTM:
-            self.lstm_fit_simple()
+            self.lstm_fit()
         else:
             raise ValueError("{} is not defined".format(self.model))
 
@@ -268,9 +223,11 @@ class PowerForecaster:
         initial_epoch = Constants.INITIAL_EPOCH.value
         callbacks = Callbacks(Constants.MODEL_NAME.value, batch_size, epochs)
 
+        X, y = self.get_shuff_train_label()
+
         history = model.fit(
-            self.train_X,
-            self.train_y,
+            X,
+            y,
             epochs=epochs,
             batch_size=batch_size,
             validation_split=0.35,
@@ -300,7 +257,8 @@ class PowerForecaster:
         elif self.model == Models.VAR:
             predicted = self.var_predict(future)
         elif self.model == Models.LSTM:
-            predicted = self.model.value.predict(self.test_X)
+            X = np.expand_dims(self.test_X, axis=-1)
+            predicted = self.model.value.predict(X)
         else:
             raise ValueError("{} is not defined".format(self.model))
         return predicted
@@ -359,6 +317,11 @@ class PowerForecaster:
 
         return None
 
+    def get_shuff_train_label(self):
+        X = np.expand_dims(self.shuf_data, axis=-1)
+        Y = self.shuf_label
+        return X, Y
+
     def evaluate(self):
         # make a prediction
         yhat = self.model.value.predict(self.test_X)
@@ -376,6 +339,52 @@ class PowerForecaster:
         rmse = sqrt(mean_squared_error(inv_y, inv_yhat))
         print('Test RMSE: %.3f' % rmse)
 
+        def visual_inspection(self):
+            style = [':', '--', '-']
+            pd.plotting.register_matplotlib_converters()
+            df = self.df
+
+            self.df_original[ColumnNames.ORIGINAL_FEATURES.value].plot(style=style, title='Original Data')
+            plt.show()
+
+            self.df[ColumnNames.FEATURES.value].plot(style=style, title='Normalized Data')
+            plt.show()
+
+            sampled = df.resample('M').sum()[ColumnNames.FEATURES.value]
+            sampled.plot(style=style, title='Aggregated Monthly')
+            plt.show()
+
+            sampled = df.resample('W').sum()[ColumnNames.FEATURES.value]
+            sampled.plot(style=style, title='Aggregated Weekly')
+            plt.show()
+
+            sampled = df.resample('D').sum()[ColumnNames.FEATURES.value]
+            sampled.rolling(30, center=True).sum().plot(style=style, title='Aggregated Daily')
+            plt.show()
+
+            by_time = df.groupby(by=df.index.time).mean()[ColumnNames.FEATURES.value]
+            ticks = 4 * 60 * 60 * np.arange(6)
+            by_time.plot(xticks=ticks, style=style, title='Averaged Hourly')
+            plt.show()
+
+            days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+
+            def tick(x):
+                if x % 24 == 12:
+                    return days[int(x) // 24]
+                else:
+                    return ""
+
+            #        ax.xaxis.set_major_formatter(NullFormatter())
+            #        ax.xaxis.set_minor_formatter(FuncFormatter(tick))
+            #        ax.tick_params(which="major", axis="x", length=10, width=1.5)
+
+            by_dow = df.groupby(by=df.dow).mean()[ColumnNames.FEATURES.value]
+            ticks = 4 * 60 * 60 * np.arange(6)
+
+    #        by_dow.plot(xticks=ticks, style=style, title='Averaged on Days of the Week')
+    #        plt.show()
+
     def plot_future(self, predicted):
         self.model.value.plot(predicted, xlabel='Date', ylabel='KWH')
         self.model.value.plot_components(predicted)
@@ -384,7 +393,9 @@ class PowerForecaster:
         style = [':', '--', '-']
         pd.plotting.register_matplotlib_converters()
         label_column = ColumnNames.LABELS.value
-        plt.plot(predicted.index, self.test_y[label_column].iloc[:len(predicted)], predicted[label_column])
+        import pdb; pdb.set_trace()
+        plt.plot(self.test_y.index[:len(predicted)], self.test_y[label_column].iloc[:len(predicted)],
+                 predicted[label_column], style=style)
         plt.show()
 
     def plot_history(self):
