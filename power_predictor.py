@@ -195,14 +195,14 @@ class PowerForecaster:
         
     def evaluate(self):
         self.loss_metrics = self.model.value.evaluate(
-            np.expand_dims(self.val_data, axis=-1),
-            self.val_label,
+            np.expand_dims(self.val_X, axis=-1),
+            self.val_y,
             batch_size=self.batch_size,
             verbose=0
         )
 
-        print(self.model.value.metrics_names)
-        print(self.loss_metrics)
+        print("Metric names:", self.model.value.metrics_names)
+        print("Loss Metrics:", self.loss_metrics)
         
     def test_prediction(self):
         X, Y = self.get_whole()
@@ -210,7 +210,7 @@ class PowerForecaster:
         print(predicted.shape)
         # predicted_BP = self.scaleBack(predicted.flatten(), data_train.shape[0])
 
-        df = self.scaledDataFrame
+        df = self.df
         timeaxis = df[df.columns[0]]
         label_column = ColumnNames.LABEL.value
         label = df[label_column]
@@ -220,8 +220,8 @@ class PowerForecaster:
         plt.plot(Y, 'b')
         plt.show()
         # for snapshot record, print these too
-        print(self.model.value.metrics_names)
-        print(self.loss_metrics)
+        print("Metric names:", self.model.value.metrics_names)
+        print("Loss Metrics:", self.loss_metrics)
         #BP = self.scaledBackDataFrame(predicted, Y.shape[0], label_column)
         #plt.scatter(BP[ColumnNames.], BP[label_column], c='r', alpha=0.1)
 
@@ -350,8 +350,8 @@ class PowerForecaster:
         self.train_y = self.shuffled_y[:int(split_ratio * length), :]
         self.train_size = int(split_ratio * length)
 
-        self.test_X = self.shuffled_X[int(split_ratio * length):, :]
-        self.test_y = self.shuffled_y[int(split_ratio * length):, :]
+        self.val_X = self.shuffled_X[int(split_ratio * length):, :]
+        self.val_y = self.shuffled_y[int(split_ratio * length):, :]
         self.val_size = length - self.train_size
 
         return None
@@ -455,6 +455,41 @@ class PowerForecaster:
         plt.xlabel('epoch')
         plt.legend(['train', 'test'], loc='upper left')
         plt.show()
+
+    def get_next_train_batch(self):
+        # getting the next train batch
+        if self.pointer + self.batchsize >= self.train_size:
+            end = self.train_size
+            start = self.pointer
+            self.pointer = 0
+            self.epoch += 1
+        else:
+            end = self.pointer + self.batchsize
+            start = self.pointer
+            self.pointer += self.batchsize
+        X = np.expand_dims(self.train_data[start:end, :], axis=-1)
+        Y = self.train_label[start:end, :]
+        return X, Y
+
+    def get_val(self):
+        X = np.expand_dims(self.val_data, axis=-1)
+
+        return X, self.val_label[:]
+
+    def get_whole(self):
+        # get whole, for validation set
+        X = np.expand_dims(self.train[:, :], axis=-1)
+        Y = self.label[:, :]
+        return X, Y
+
+    def reset(self):
+        self.pointer = 0
+        self.epoch = 0
+
+    def get_shuff_train_label(self):
+        X = np.expand_dims(self.shuffled_X, axis=-1)
+        Y = self.shuffled_y
+        return X, Y
 
 
 class ModelEvaluator:
