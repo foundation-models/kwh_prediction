@@ -361,7 +361,7 @@ class PowerForecaster:
         Y = self.shuffled_y
         return X, Y
 
-    def evaluate(self):
+    def evaluate_performance(self):
         # make a prediction
         X = np.expand_dims(self.test_X, axis=-1)
         yhat = self.model.value.predict(X)
