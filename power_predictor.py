@@ -14,7 +14,7 @@ from statsmodels.tsa.vector_ar.vecm import coint_johansen
 
 from model_util import facebook_prophet_filter, Callbacks, lstm_conv1d_model
 from utility import normalize, series_to_supervised, \
-    explore_data, calculate_errors
+    explore_data
 
 
 class Constants(Enum):
@@ -29,7 +29,7 @@ class Constants(Enum):
     # the following is for lstm model
     SLIDING_WINDOW_SIZE = 4
     FEATURE_SIZE = 1
-    EPOCHS = 5
+    EPOCHS = 2
     INITIAL_EPOCH = 0
     BATCH_SIZE = 72
     MODEL_NAME = 'lstm'
@@ -65,6 +65,9 @@ class PowerForecaster:
 
     def __init__(self, df, model=Models.PROPHET,
                  train_test_split_ratio=Constants.TRAIN_TEST_SPLIT_RATIO.value,
+                 epochs = Constants.EPOCHS.value,
+                 initial_epoch = Constants.INITIAL_EPOCH.value,
+                 batch_size = Constants.BATCH_SIZE.value,
                  do_shuffle=True):
         # explore_data(df)
         # first step is to create a timestamp column as index to turn it to a TimeSeries data
@@ -100,12 +103,15 @@ class PowerForecaster:
         self.train_X, self.test_X = self.train_test_split(self.df[features])
         self.train_y, self.test_y = self.train_test_split(self.df[ColumnNames.LABELS.value])
         self.model_fit = None
+        self.epochs = epochs
+        self.initial_epoch = initial_epoch
+        self.batch_size = batch_size
         self.history = None
         # following is defines in sliding_window
         self.do_shuffle = do_shuffle
         self.val_idx = None
-        self.shuf_data = None
-        self.shuf_label = None
+        self.shuffled_X = None
+        self.shuffled_y = None
         self.train = None
         self.label = None
         self.train_size = None
@@ -186,6 +192,38 @@ class PowerForecaster:
             self.lstm_fit()
         else:
             raise ValueError("{} is not defined".format(self.model))
+        
+    def evaluate(self):
+        self.loss_metrics = self.model.value.evaluate(
+            np.expand_dims(self.val_data, axis=-1),
+            self.val_label,
+            batch_size=self.batch_size,
+            verbose=0
+        )
+
+        print(self.model.value.metrics_names)
+        print(self.loss_metrics)
+        
+    def test_prediction(self):
+        X, Y = self.get_whole()
+        predicted = self.model.value.predict(X)
+        print(predicted.shape)
+        # predicted_BP = self.scaleBack(predicted.flatten(), data_train.shape[0])
+
+        df = self.scaledDataFrame
+        timeaxis = df[df.columns[0]]
+        label_column = ColumnNames.LABEL.value
+        label = df[label_column]
+        print('Model ', Constants.MODEL_NAME.value)
+        print('ecpochs', self.epochs)
+        plt.plot(predicted, 'r')
+        plt.plot(Y, 'b')
+        plt.show()
+        # for snapshot record, print these too
+        print(self.model.value.metrics_names)
+        print(self.loss_metrics)
+        #BP = self.scaledBackDataFrame(predicted, Y.shape[0], label_column)
+        #plt.scatter(BP[ColumnNames.], BP[label_column], c='r', alpha=0.1)
 
     def prophet_fit(self):
         past = self.train_y.copy()
@@ -198,7 +236,7 @@ class PowerForecaster:
                                           seasonal_order=Constants.SARIMAX_SEASONAL_ORDER.value)
         # ,enforce_stationarity=False, enforce_invertibility=False, freq='15T')
         print("SARIMAX fitting ....")
-        self.model_fit = model.fit()
+        self.model_fit = self.model.value.fit()
         self.model_fit.summary()
         print("SARIMAX forecast", self.model_fit.forecast())
 
@@ -206,44 +244,40 @@ class PowerForecaster:
         print("making VAR model")
         model = VAR(endog=self.train_X[ColumnNames.FEATURES.value].dropna())
         print("VAR fitting ....")
-        self.model_fit = model.fit()
+        self.model_fit = self.model.value.fit()
         self.model_fit.summary()
 
-    def lstm_fit_simple(self):
-        history_object = self.model.value.fit(self.train_X, self.train_y, epochs=Constants.EPOCHS.value,
-                                              batch_size=Constants.BATCH_SIZE.value,
-                                              validation_data=(self.test_X, self.test_y), verbose=2, shuffle=False)
-        if history_object is not None:
-            self.history = history_object.history
-
     def lstm_fit(self):
-        epochs = Constants.EPOCHS.value
-        batch_size = Constants.BATCH_SIZE.value
-        model = Models.LSTM.value
-        initial_epoch = Constants.INITIAL_EPOCH.value
-        callbacks = Callbacks(Constants.MODEL_NAME.value, batch_size, epochs)
+        print(self.model.value.summary())
+
+        callbacks = Callbacks(Constants.MODEL_NAME.value, self.batch_size, self.epochs)
 
         X, y = self.get_shuff_train_label()
 
-        history = model.fit(
+        print(self.epochs)
+        print(self.initial_epoch)
+
+        self.history = self.model.value.fit(
             X,
             y,
-            epochs=epochs,
-            batch_size=batch_size,
+            epochs=self.epochs,
+            batch_size=self.batch_size,
             validation_split=0.35,
             verbose=0,
             callbacks=callbacks.getDefaultCallbacks(),
-            initial_epoch=initial_epoch,
+            initial_epoch=self.initial_epoch,
 
         )
 
-        print(model.summary())
-        plt.plot(np.arange(epochs - initial_epoch), history.history['loss'], label='train')
-        plt.plot(np.arange(epochs - initial_epoch), history.history['val_loss'], label='validation')
+        plt.plot(np.arange(self.epochs - self.initial_epoch)
+                 , self.history.history['loss'], label='train')
+        plt.plot(np.arange(self.epochs - self.initial_epoch)
+                 , self.history.history['val_loss'], label='validation')
         plt.legend()
 
-    def predict(self):
-        future = Constants.DEFAULT_FUTURE_PERIODS.value
+    def predict(self, feature_set=None):
+        future = feature_set if feature_set is not None \
+            else Constants.DEFAULT_FUTURE_PERIODS.value
         if self.model == Models.PROPHET:
             self.future = self.model.value.make_future_dataframe(periods=future,
                                                                  freq=Constants.DEFAULT_FUTURE_FREQ.value,
@@ -257,10 +291,15 @@ class PowerForecaster:
         elif self.model == Models.VAR:
             predicted = self.var_predict(future)
         elif self.model == Models.LSTM:
-            X = np.expand_dims(self.test_X, axis=-1)
+            if feature_set is None:
+                future = self.test_X
+            X = np.expand_dims(future, axis=-1)
             predicted = self.model.value.predict(X)
+            #if(())
+            print("Error from prediction: ", mean_squared_error(predicted, future))
         else:
             raise ValueError("{} is not defined".format(self.model))
+
         return predicted
 
     def arima_predict(self, future):
@@ -281,50 +320,51 @@ class PowerForecaster:
         # Generate the data matrix      
         length0 = self.df.shape[0]
         window_size = Constants.SLIDING_WINDOW_SIZE.value
-        sliding_window_data = np.zeros((length0 - window_size, window_size))
+        sliding_window_feature = np.zeros((length0 - window_size, window_size))
         sliding_window_label = np.zeros((length0 - window_size, 1))
         label_column = ColumnNames.LABEL.value
         for counter in range(length0 - window_size):
             sliding_window_label[counter, :] = self.df[label_column][counter + window_size]
         feature_column = ColumnNames.TEMPERATURE.value
         for counter in range(length0 - window_size):
-            sliding_window_data[counter, :] = self.df[feature_column][
-                                              counter: counter + window_size]
+            sliding_window_feature[counter, :] = self.df[feature_column][
+                                                 counter: counter + window_size]
         if self.do_shuffle:
             print('Random shuffeling')
-        length = sliding_window_data.shape[0]
+        length = sliding_window_feature.shape[0]
         print("sliding window length", length)
 
         split_ratio = Constants.TRAIN_TEST_SPLIT_RATIO.value
         idx = np.random.choice(length, length, replace=False) if self.do_shuffle else np.arange(length)
         self.val_idx = idx[int(split_ratio * length):]
 
-        shuf_data = sliding_window_data[idx, :]
-        shuf_label = sliding_window_label[idx, :]
+        feature_window_shuffled = sliding_window_feature[idx, :]
+        label_window_shuffled = sliding_window_label[idx, :]
 
-        self.shuf_data = shuf_data
-        self.shuf_label = shuf_label
-        self.train = sliding_window_data
+        self.shuffled_X = feature_window_shuffled
+        self.shuffled_y = label_window_shuffled
+        self.train = sliding_window_feature
         self.label = sliding_window_label
 
-        self.train_X = shuf_data[:int(split_ratio * length), :]
-        self.train_y = shuf_label[:int(split_ratio * length), :]
+        self.train_X = self.shuffled_X[:int(split_ratio * length), :]
+        self.train_y = self.shuffled_y[:int(split_ratio * length), :]
         self.train_size = int(split_ratio * length)
 
-        self.test_X = shuf_data[int(split_ratio * length):, :]
-        self.test_y = shuf_label[int(split_ratio * length):, :]
-        self.val_size = int((1 - split_ratio) * length)
+        self.test_X = self.shuffled_X[int(split_ratio * length):, :]
+        self.test_y = self.shuffled_y[int(split_ratio * length):, :]
+        self.val_size = length - self.train_size
 
         return None
 
     def get_shuff_train_label(self):
-        X = np.expand_dims(self.shuf_data, axis=-1)
-        Y = self.shuf_label
+        X = np.expand_dims(self.shuffled_X, axis=-1)
+        Y = self.shuffled_y
         return X, Y
 
     def evaluate(self):
         # make a prediction
-        yhat = self.model.value.predict(self.test_X)
+        X = np.expand_dims(self.test_X, axis=-1)
+        yhat = self.model.value.predict(X)
         test_X = self.test_X.reshape((self.test_X.shape[0], self.test_X.shape[2]))
         # invert scaling for forecast
         inv_yhat = pd.concatenate((yhat, test_X[:, 1:]), axis=1)
@@ -339,68 +379,77 @@ class PowerForecaster:
         rmse = sqrt(mean_squared_error(inv_y, inv_yhat))
         print('Test RMSE: %.3f' % rmse)
 
-        def visual_inspection(self):
-            style = [':', '--', '-']
-            pd.plotting.register_matplotlib_converters()
-            df = self.df
-
-            self.df_original[ColumnNames.ORIGINAL_FEATURES.value].plot(style=style, title='Original Data')
-            plt.show()
-
-            self.df[ColumnNames.FEATURES.value].plot(style=style, title='Normalized Data')
-            plt.show()
-
-            sampled = df.resample('M').sum()[ColumnNames.FEATURES.value]
-            sampled.plot(style=style, title='Aggregated Monthly')
-            plt.show()
-
-            sampled = df.resample('W').sum()[ColumnNames.FEATURES.value]
-            sampled.plot(style=style, title='Aggregated Weekly')
-            plt.show()
-
-            sampled = df.resample('D').sum()[ColumnNames.FEATURES.value]
-            sampled.rolling(30, center=True).sum().plot(style=style, title='Aggregated Daily')
-            plt.show()
-
-            by_time = df.groupby(by=df.index.time).mean()[ColumnNames.FEATURES.value]
-            ticks = 4 * 60 * 60 * np.arange(6)
-            by_time.plot(xticks=ticks, style=style, title='Averaged Hourly')
-            plt.show()
-
-            days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
-
-            def tick(x):
-                if x % 24 == 12:
-                    return days[int(x) // 24]
-                else:
-                    return ""
-
-            #        ax.xaxis.set_major_formatter(NullFormatter())
-            #        ax.xaxis.set_minor_formatter(FuncFormatter(tick))
-            #        ax.tick_params(which="major", axis="x", length=10, width=1.5)
-
-            by_dow = df.groupby(by=df.dow).mean()[ColumnNames.FEATURES.value]
-            ticks = 4 * 60 * 60 * np.arange(6)
-
-    #        by_dow.plot(xticks=ticks, style=style, title='Averaged on Days of the Week')
-    #        plt.show()
 
     def plot_future(self, predicted):
         self.model.value.plot(predicted, xlabel='Date', ylabel='KWH')
         self.model.value.plot_components(predicted)
 
-    def plot_prediction(self, predicted):
+    #        by_dow.plot(xticks=ticks, style=style, title='Averaged on Days of the Week')
+    #        plt.show()
+
+    def visual_inspection(self):
+        style = [':', '--', '-']
+        pd.plotting.register_matplotlib_converters()
+        df = self.df
+
+        self.df_original[ColumnNames.ORIGINAL_FEATURES.value].plot(style=style, title='Original Data')
+        plt.show()
+
+        self.df[ColumnNames.FEATURES.value].plot(style=style, title='Normalized Data')
+        plt.show()
+
+        sampled = df.resample('M').sum()[ColumnNames.FEATURES.value]
+        sampled.plot(style=style, title='Aggregated Monthly')
+        plt.show()
+
+        sampled = df.resample('W').sum()[ColumnNames.FEATURES.value]
+        sampled.plot(style=style, title='Aggregated Weekly')
+        plt.show()
+
+        sampled = df.resample('D').sum()[ColumnNames.FEATURES.value]
+        sampled.rolling(30, center=True).sum().plot(style=style, title='Aggregated Daily')
+        plt.show()
+
+        by_time = df.groupby(by=df.index.time).mean()[ColumnNames.FEATURES.value]
+        ticks = 4 * 60 * 60 * np.arange(6)
+        by_time.plot(xticks=ticks, style=style, title='Averaged Hourly')
+        plt.show()
+
+        days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+
+        def tick(x):
+            if x % 24 == 12:
+                return days[int(x) // 24]
+            else:
+                return ""
+
+        #        ax.xaxis.set_major_formatter(NullFormatter())
+        #        ax.xaxis.set_minor_formatter(FuncFormatter(tick))
+        #        ax.tick_params(which="major", axis="x", length=10, width=1.5)
+
+        by_dow = df.groupby(by=df.dow).mean()[ColumnNames.FEATURES.value]
+        ticks = 4 * 60 * 60 * np.arange(6)
+
+    def plot_prediction(self, start_index, end_index):
         style = [':', '--', '-']
         pd.plotting.register_matplotlib_converters()
         label_column = ColumnNames.LABELS.value
-        import pdb; pdb.set_trace()
-        plt.plot(self.test_y.index[:len(predicted)], self.test_y[label_column].iloc[:len(predicted)],
-                 predicted[label_column], style=style)
+        #import pdb; pdb.set_trace()
+
+        t = self.train.index.iloc[start_index:end_index]
+        X = self.train.iloc[start_index: end_index]
+        true_y = self.label.iloc[start_index, end_index]
+        y = self.model.value.predict(X)
+
+        plt.plot(t, y, true_y, style=style)
         plt.show()
 
     def plot_history(self):
-        plt.plot(self.history['loss'])
-        plt.plot(self.history['val_loss'])
+        plt.plot(np.arange(self.epochs - self.initial_epoch), 
+                 self.history.history['loss'], label='train')
+        plt.plot(np.arange(self.epochs - self.initial_epoch), 
+                 self.history.history['val_loss'], label='validation')
+        plt.legend()
         plt.title('model accuracy')
         plt.ylabel('accuracy')
         plt.xlabel('epoch')
@@ -416,11 +465,11 @@ class ModelEvaluator:
             print("TRAIN:", train_index, "TEST:", test_index)
             y_column = self.df_normalized[ColumnNames.LABEL.value]
             y_train, y_test = y_column[train_index], y_column[test_index]
-            model.fit(pd.DataFrame(y_train))
-            forecast = model.forecast(None)
+            self.model.value.fit(pd.DataFrame(y_train))
+            forecast = self.model.value.forecast(None)
             print(y_test.shape)
             print(forecast.shape)
-            calculate_errors(y_test, forecast)
+            mean_squared_error(y_test, forecast)
             plt.plot(y_test, 'g')
             plt.plot(forecast, 'b')
             size = len(y_test)

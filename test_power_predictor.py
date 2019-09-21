@@ -27,14 +27,17 @@ class TestPowerForecaster(TestCase):
         test_class = PowerForecaster(self.df, Models.LSTM)
         test_class.sliding_window()
         window_size = Constants.SLIDING_WINDOW_SIZE
-        self.assertEqual(test_class.shuf_data.shape, (37920 - window_size, window_size))
+        self.assertEqual(test_class.shuffled_X.shape, (37920 - window_size, window_size))
 
     def test_lstm(self):
         test_class = PowerForecaster(self.df, model=Models.LSTM)
         test_class.sliding_window()
         test_class.fit()
-        predicted = test_class.predict()
-        test_class.plot_prediction(predicted)
+        test_class.plot_history()
+        test_class.evaluate()
+        test_class.test_prediction()
+        #predicted = test_class.predict()
+        #test_class.plot_prediction(1000,1200)
         self.assertTrue(True)
 
     def test_fit_predict(self):

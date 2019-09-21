@@ -5,9 +5,6 @@ from sklearn.metrics import mean_squared_error
 from sklearn.preprocessing import QuantileTransformer
 
 
-def calculate_errors(y_actual, y_predicted):
-    rmse = sqrt(mean_squared_error(y_actual, y_predicted))
-    return rmse
 
 
 def normalize(df, columns, transformer=QuantileTransformer()):
