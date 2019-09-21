@@ -27,7 +27,7 @@ class Constants(Enum):
     SARIMAX_ORDER = (7, 1, 7)
     SARIMAX_SEASONAL_ORDER = (0, 0, 0, 0, 12)
     # the following is for lstm model
-    WINDOW_TIME_STEPS = 4
+    SLIDING_WINDOW_SIZE = 4
     FEATURE_SIZE = 3
     EPOCHS = 5
     INITIAL_EPOCH = 0
@@ -50,7 +50,7 @@ class ColumnNames(Enum):
 
 class Models(Enum):
     PROPHET = fbprophet.Prophet(changepoint_prior_scale=0.10, yearly_seasonality=True)
-    LSTM = lstm_model(10, (Constants.WINDOW_TIME_STEPS.value, Constants.FEATURE_SIZE.value))
+    LSTM = lstm_model(10, (Constants.SLIDING_WINDOW_SIZE.value, Constants.FEATURE_SIZE.value))
     ARIMA = sm.tsa.statespace.SARIMAX
     VAR = VAR
 
@@ -63,7 +63,9 @@ class PowerForecaster:
     https://drive.google.com/uc?export=download&id=1z2MBYJ8k4M5J3udlFVc2d8opE_f-S4BK
     """
 
-    def __init__(self, df, model=Models.PROPHET, train_test_split_ratio=Constants.TRAIN_TEST_SPLIT_RATIO.value):
+    def __init__(self, df, model=Models.PROPHET,
+                 train_test_split_ratio=Constants.TRAIN_TEST_SPLIT_RATIO.value,
+                 do_shuffle=True):
         # explore_data(df)
         # first step is to create a timestamp column as index to turn it to a TimeSeries data
         df.index = pd.to_datetime(df[ColumnNames.DATE.value] + df[ColumnNames.TIME.value],
@@ -84,7 +86,8 @@ class PowerForecaster:
 
         # for any regression or forecasting it is better to work with normalized data
         self.transformer = QuantileTransformer()  # handle outliers better than MinMaxScalar
-        normalized = normalize(df, ColumnNames.FEATURES.value, transformer=self.transformer)
+        features = ColumnNames.FEATURES.value
+        normalized = normalize(df, features, transformer=self.transformer)
 
         # we use the last part (after 12/1/2013) that doesnt have temperature for testing
         cutoff_date = Constants.CUTOFF_DATE.value
@@ -94,10 +97,19 @@ class PowerForecaster:
         self.df[ColumnNames.DATE_STAMP.value] = self.df.index
         self.train_test_split_ratio = train_test_split_ratio
         self.model = model
-        self.train_X, self.test_X = self.train_test_split(self.df[ColumnNames.FEATURES.value])
+        self.train_X, self.test_X = self.train_test_split(self.df[features])
         self.train_y, self.test_y = self.train_test_split(self.df[ColumnNames.LABELS.value])
         self.model_fit = None
         self.history = None
+        # following is defines in sliding_window
+        self.do_shuffle = do_shuffle
+        self.val_idx = None
+        self.shuf_data = None
+        self.shuf_label = None
+        self.train = None
+        self.label = None
+        self.train_size = None
+        self.val_size = None
 
         # if logging.getLogger().getEffectiveLevel() == logging.DEBUG:
         explore_data(self.df)
@@ -123,8 +135,9 @@ class PowerForecaster:
         _test_X, self.test_y = test.iloc[:, :-1], test.iloc[:, -1]
         # reshape input to be 3D [samples, timesteps, features]
         self.train_X = _train_X.values.reshape(
-            (_train_X.shape[0], Constants.WINDOW_TIME_STEPS.value, _train_X.shape[1]))
-        self.test_X = _test_X.values.reshape((_test_X.shape[0], Constants.WINDOW_TIME_STEPS.value, _test_X.shape[1]))
+            (_train_X.shape[0], Constants.SLIDING_WINDOW_SIZE.value, _train_X.shape[1]))
+        self.test_X = _test_X.values.reshape((_test_X.
+                                              shape[0], Constants.SLIDING_WINDOW_SIZE.value, _test_X.shape[1]))
         print(self.train_X.shape, self.train_y.shape, self.test_X.shape, self.test_y.shape)
 
     def stationary_test(self):
@@ -309,7 +322,7 @@ class PowerForecaster:
     def sliding_window(self):
         # Generate the data matrix      
         length0 = self.df.shape[0]
-        window_size = Constants.WINDOW_TIME_STEPS
+        window_size = Constants.SLIDING_WINDOW_SIZE.value
         sliding_window_data = np.zeros((length0 - window_size, window_size))
         sliding_window_label = np.zeros((length0 - window_size, 1))
         label_column = ColumnNames.LABEL.value
@@ -319,15 +332,14 @@ class PowerForecaster:
         for counter in range(length0 - window_size):
             sliding_window_data[counter, :] = self.df[feature_column][
                                               counter: counter + window_size]
-        print('Random shuffeling')
+        if self.do_shuffle:
+            print('Random shuffeling')
         length = sliding_window_data.shape[0]
         print("sliding window length", length)
-        idx = np.random.choice(length, length, replace=False)
-        
-        frac = Constants.TRAIN_TEST_SPLIT_RATIO.value
-        #if not self.random:
-        idx = np.arange(length)
-        self.val_idx = idx[int( * length):]
+
+        split_ratio = Constants.TRAIN_TEST_SPLIT_RATIO.value
+        idx = np.random.choice(length, length, replace=False) if self.do_shuffle else np.arange(length)
+        self.val_idx = idx[int(split_ratio * length):]
 
         shuf_data = sliding_window_data[idx, :]
         shuf_label = sliding_window_label[idx, :]
@@ -337,13 +349,13 @@ class PowerForecaster:
         self.train = sliding_window_data
         self.label = sliding_window_label
 
-        self.train_X = shuf_data[:int(frac * length), :]
-        self.train_y = shuf_label[:int(frac * length), :]
-        self.train_size = int(frac * length)
+        self.train_X = shuf_data[:int(split_ratio * length), :]
+        self.train_y = shuf_label[:int(split_ratio * length), :]
+        self.train_size = int(split_ratio * length)
 
-        self.test_X = shuf_data[int(frac * length):, :]
-        self.test_y = shuf_label[int(frac * length):, :]
-        self.val_size = int((1 - frac) * length)
+        self.test_X = shuf_data[int(split_ratio * length):, :]
+        self.test_y = shuf_label[int(split_ratio * length):, :]
+        self.val_size = int((1 - split_ratio) * length)
 
         return None
 
