@@ -225,26 +225,50 @@ class PowerForecaster:
         df[column_name] = data
         return df
 
-    def find_index(self, start_date_st, end_date_st):
+    def find_index(self, start_date_st, end_date_st = None):
         start_date = pd.to_datetime(start_date_st)
-        end_date = pd.to_datetime(end_date_st)
         df = pd.DataFrame()
         df['date'] = self.df.index
-        mask = (df['date'] >= start_date) & (df['date'] < end_date)
+        if end_date_st is None:
+            mask = (df['date'] >= start_date)
+        else:
+            end_date = pd.to_datetime(end_date_st)
+            mask = (df['date'] >= start_date) & (df['date'] < end_date)
 
         index = df.loc[mask].index
         return index[0], index[-1]
 
+    def adjust_index_and_training_shift(self, training_duration_in_frequency, start_date_in_labeling_st,
+                                        start_date_training_st = None
+                                        ):
+        logging.debug("Original range data of data: [{}-{}]".format(self.df.index[0], self.df.index[-1]))
+        index_start_labeling, _ = self.find_index(start_date_in_labeling_st)
+        if start_date_training_st is not None:
+            index_start_training, _ = self.find_index(start_date_training_st)
+            if index_start_labeling < index_start_training:
+                raise ValueError("Labeling should be after training")
+            self.shift = index_start_labeling - index_start_training
+        else:
+            index_start_training = 0
+            self.shift = index_start_labeling
+        final_index = index_start_training + training_duration_in_frequency + self.shift
+        logging.debug("start index: {}, final_index: {}".format(index_start_training, final_index))
+        self.df = self.df.iloc[index_start_training:index_start_training + training_duration_in_frequency + self.shift]
+
+        logging.info("Shift is set to be {}, we picked the slice of [{} : {}] for trainig".format(
+            self.shift, self.df.index[0]
+            , self.df.index[-1]
+        ))
+
     def lstm_predict(self, model
-                     , start_index_to_predict=None
-                     , delta_index = Constants.SHIFT_IN_TIME_STEP_TO_PREDICT.value):
+                     , start_date_to_predict=None
+                     , end_date_to_predic = None
+                     ,
+                     ):
         X, true_y = self.get_whole()
 
-        shift = Constants.SHIFT_IN_TIME_STEP_TO_PREDICT.value
-        # import pdb; pdb.set_trace()
-        if start_index_to_predict is not None:
-            y_index_i = start_index_to_predict
-            y_index_f = start_index_to_predict + delta_index
+        if start_date_to_predict is not None:
+            y_index_i, y_index_f = self.find_index(start_date_to_predict, end_date_to_predic)
             x_index_i = 0 if y_index_i <= shift else y_index_i - shift
             x_index_f = x_index_i + delta_index
 

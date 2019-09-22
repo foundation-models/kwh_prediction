@@ -195,3 +195,47 @@ Use tf.where in 2.0, which has the same broadcast rule as np.where
 2019-09-22 17:11:54,300 [MainThread  ] [INFO ]  resample: 8H. future_prediction: 21, epochs: 100, batch_size: 20, window_size: 30, eurons: 30
 2019-09-22 17:17:04,808 [MainThread  ] [INFO ]  resample: 8H. future_prediction: 21, epochs: 100, batch_size: 20, window_size: 30, eurons: 30
 2019-09-22 17:18:48,236 [MainThread  ] [INFO ]  resample: 8H. future_prediction: 21, epochs: 100, batch_size: 20, window_size: 30, eurons: 30
+2019-09-22 18:08:23,443 [MainThread  ] [INFO ]  resample: 8H. future_prediction: 21, epochs: 100, batch_size: 20, window_size: 30, eurons: 30
+2019-09-22 18:09:21,102 [MainThread  ] [INFO ]  resample: 8H. future_prediction: 21, epochs: 100, batch_size: 20, window_size: 30, eurons: 30
+2019-09-22 18:09:40,774 [MainThread  ] [INFO ]  resample: 8H. future_prediction: 21, epochs: 100, batch_size: 20, window_size: 30, eurons: 30
+2019-09-22 18:09:55,102 [MainThread  ] [INFO ]  resample: 8H. future_prediction: 21, epochs: 100, batch_size: 20, window_size: 30, eurons: 30
+2019-09-22 18:10:26,902 [MainThread  ] [INFO ]  resample: 8H. future_prediction: 21, epochs: 100, batch_size: 20, window_size: 30, eurons: 30
+2019-09-22 18:11:13,938 [MainThread  ] [INFO ]  resample: 8H. future_prediction: 21, epochs: 100, batch_size: 20, window_size: 30, eurons: 30
+2019-09-22 18:11:14,477 [MainThread  ] [INFO ]  Shift is set to be 864, we picked the slice of [2012-12-01 00:00:00 : 2012-12-10 22:15:00] for trainig
+2019-09-22 18:13:06,768 [MainThread  ] [INFO ]  resample: 8H. future_prediction: 21, epochs: 100, batch_size: 20, window_size: 30, eurons: 30
+2019-09-22 18:21:44,900 [MainThread  ] [INFO ]  resample: 8H. future_prediction: 21, epochs: 100, batch_size: 20, window_size: 30, eurons: 30
+2019-09-22 18:21:45,445 [MainThread  ] [DEBUG]  start index: 2880, final_index: 3834
+2019-09-22 18:21:45,445 [MainThread  ] [INFO ]  Shift is set to be 864, we picked the slice of [2012-12-01 00:00:00 : 2012-12-10 22:15:00] for trainig
+2019-09-22 18:27:52,108 [MainThread  ] [INFO ]  resample: 8H. future_prediction: 21, epochs: 100, batch_size: 20, window_size: 30, eurons: 30
+2019-09-22 18:27:52,627 [MainThread  ] [DEBUG]  start index: 90, final_index: 207
+2019-09-22 18:27:52,627 [MainThread  ] [INFO ]  Shift is set to be 27, we picked the slice of [2012-12-01 00:00:00 : 2013-01-08 16:00:00] for trainig
+2019-09-22 18:30:39,983 [MainThread  ] [INFO ]  resample: 8H. future_prediction: 21, epochs: 100, batch_size: 20, window_size: 30, eurons: 30
+2019-09-22 18:30:40,517 [MainThread  ] [DEBUG]  start index: 90, final_index: 207
+2019-09-22 18:30:40,518 [MainThread  ] [INFO ]  Shift is set to be 27, we picked the slice of [2012-12-01 00:00:00 : 2013-01-08 16:00:00] for trainig
+2019-09-22 18:30:40,521 [MainThread  ] [DEBUG]  start index: 0, final_index: 117
+2019-09-22 18:30:40,521 [MainThread  ] [INFO ]  Shift is set to be 27, we picked the slice of [2012-12-01 00:00:00 : 2013-01-08 16:00:00] for trainig
+2019-09-22 18:32:52,515 [MainThread  ] [INFO ]  resample: 8H. future_prediction: 21, epochs: 100, batch_size: 20, window_size: 30, eurons: 30
+2019-09-22 18:32:53,034 [MainThread  ] [DEBUG]  start index: 90, final_index: 207
+2019-09-22 18:32:53,035 [MainThread  ] [INFO ]  Shift is set to be 27, we picked the slice of [2012-12-01 00:00:00 : 2013-01-08 16:00:00] for trainig
+2019-09-22 18:32:53,038 [MainThread  ] [DEBUG]  start index: 0, final_index: 117
+2019-09-22 18:32:53,038 [MainThread  ] [INFO ]  Shift is set to be 27, we picked the slice of [2012-12-01 00:00:00 : 2013-01-08 16:00:00] for trainig
+2019-09-22 18:35:21,141 [MainThread  ] [INFO ]  resample: 8H. future_prediction: 21, epochs: 100, batch_size: 20, window_size: 30, eurons: 30
+2019-09-22 18:35:21,653 [MainThread  ] [DEBUG]  Original range data of data: [2012-11-01 00:00:00-2013-11-30 16:00:00]
+2019-09-22 18:35:21,658 [MainThread  ] [DEBUG]  start index: 90, final_index: 207
+2019-09-22 18:35:21,659 [MainThread  ] [INFO ]  Shift is set to be 27, we picked the slice of [2012-12-01 00:00:00 : 2013-01-08 16:00:00] for trainig
+2019-09-22 18:35:21,660 [MainThread  ] [DEBUG]  Original range data of data: [2012-12-01 00:00:00-2013-01-08 16:00:00]
+2019-09-22 18:35:21,663 [MainThread  ] [DEBUG]  start index: 0, final_index: 117
+2019-09-22 18:35:21,664 [MainThread  ] [INFO ]  Shift is set to be 27, we picked the slice of [2012-12-01 00:00:00 : 2013-01-08 16:00:00] for trainig
+2019-09-22 18:37:33,625 [MainThread  ] [INFO ]  resample: 8H. future_prediction: 21, epochs: 100, batch_size: 20, window_size: 30, eurons: 30
+2019-09-22 18:37:34,138 [MainThread  ] [DEBUG]  Original range data of data: [2012-11-01 00:00:00-2013-11-30 16:00:00]
+2019-09-22 18:37:34,144 [MainThread  ] [DEBUG]  start index: 90, final_index: 207
+2019-09-22 18:37:34,144 [MainThread  ] [INFO ]  Shift is set to be 27, we picked the slice of [2012-12-01 00:00:00 : 2013-01-08 16:00:00] for trainig
+2019-09-22 18:37:34,144 [MainThread  ] [INFO ]  resample: 8H. future_prediction: 21, epochs: 100, batch_size: 20, window_size: 30, eurons: 30
+2019-09-22 18:38:34,221 [MainThread  ] [INFO ]  resample: 8H. future_prediction: 21, epochs: 100, batch_size: 20, window_size: 30, eurons: 30
+2019-09-22 18:38:34,740 [MainThread  ] [DEBUG]  Original range data of data: [2012-11-01 00:00:00-2013-11-30 16:00:00]
+2019-09-22 18:38:34,746 [MainThread  ] [DEBUG]  start index: 90, final_index: 207
+2019-09-22 18:38:34,747 [MainThread  ] [INFO ]  Shift is set to be 27, we picked the slice of [2012-12-01 00:00:00 : 2013-01-08 16:00:00] for trainig
+2019-09-22 18:38:34,748 [MainThread  ] [INFO ]  resample: 8H. future_prediction: 21, epochs: 100, batch_size: 20, window_size: 30, eurons: 30
+2019-09-22 18:38:35,249 [MainThread  ] [DEBUG]  Original range data of data: [2012-11-01 00:00:00-2013-11-30 16:00:00]
+2019-09-22 18:38:35,252 [MainThread  ] [DEBUG]  start index: 0, final_index: 207
+2019-09-22 18:38:35,252 [MainThread  ] [INFO ]  Shift is set to be 117, we picked the slice of [2012-11-01 00:00:00 : 2013-01-08 16:00:00] for trainig

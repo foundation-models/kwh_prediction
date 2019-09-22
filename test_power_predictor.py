@@ -33,6 +33,25 @@ class TestPowerForecaster(TestCase):
         i, j = powerForecaster.find_index('2012-12-01', '2013-01-01')
         self.assertEqual(i, 2880)
         self.assertEqual(j, 5855)
+        j, _ = powerForecaster.find_index("2013-01-01")
+        self.assertEqual(j, 5856)
+
+    def test_adjust_index_and_training_shift(self):
+
+        powerForecaster = PowerForecaster(self.df.copy(),
+                                     upsample_freq='8H')
+        powerForecaster.adjust_index_and_training_shift(
+            training_duration_in_frequency=30*3 # 30 days, freq is 8H
+            , start_date_in_labeling_st="2012-12-10"
+            , start_date_training_st="2012-12-01"
+        )
+        # Another call
+        powerForecaster = PowerForecaster(self.df.copy(),
+                                     upsample_freq='8H')
+        powerForecaster.adjust_index_and_training_shift(
+            training_duration_in_frequency=30*3 # 30 days, freq is 8H
+            , start_date_in_labeling_st="2012-12-10"
+        )
 
     def test_sliding_window(self):
         powerForecaster = PowerForecaster(self.df, Models.LSTM)
