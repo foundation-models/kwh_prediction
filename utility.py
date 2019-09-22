@@ -1,10 +1,8 @@
 import logging
-from math import sqrt
 
 import pandas as pd
-from sklearn.metrics import mean_squared_error
 from sklearn.preprocessing import QuantileTransformer
-
+import matplotlib.pylab as plt
 
 def set_logging(log_path, file_name):
     logFormatter = logging.Formatter("%(asctime)s [%(threadName)-12.12s] [%(levelname)-5.5s]  %(message)s")
@@ -30,6 +28,36 @@ def normalize(df, columns, transformer=QuantileTransformer()):
     df_scaled = pd.DataFrame(df)
     df_scaled[columns] = scaled_one
     return df_scaled
+
+def plot_duration(df, start_date_st, end_date_st):
+    pd.plotting.register_matplotlib_converters()
+    style = [':', '--', '-']
+    start, end = find_index(df, start_date_st, end_date_st)
+    sampled = df.iloc[start:end]
+    sampled.plot(style=style, title='Aggregated Monthly')
+    plt.show()
+
+
+def find_index(df, start_date_st, end_date_st = None):
+    if not isinstance(df.index[0], pd.Timestamp):
+        msg = "Index should be of type pandas Timestamp"
+        logging.error(msg)
+        raise ValueError(msg)
+    start_date = pd.to_datetime(start_date_st)
+    tmp_df = pd.DataFrame()
+    tmp_df['date'] = df.index
+    if end_date_st is None:
+        mask = (tmp_df['date'] >= start_date)
+    else:
+        end_date = pd.to_datetime(end_date_st)
+        mask = (tmp_df['date'] >= start_date) & (tmp_df['date'] < end_date)
+
+    index = tmp_df.loc[mask].index
+    if len(index) == 0:
+        msg = "Nothing matched your critera"
+        logging.error(msg)
+        raise ValueError(msg)
+    return index[0], index[-1]
 
 
 def resample_data(df, columns, freq='H'):
@@ -80,7 +108,9 @@ def explore_data(df):
     separator = '_' * 100
     print("First 3 rows:", df.head(3))
     print(separator)
-    print("Sample of one element", df.iloc[0])
+    print("First element", df.iloc[0])
+    print(separator)
+    print("Last element", df.iloc[-1])
     print(separator)
     print("Dataframe index: ", df.index)
     print(separator)

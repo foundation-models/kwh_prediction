@@ -14,7 +14,7 @@ from statsmodels.tsa.vector_ar.var_model import VAR
 from statsmodels.tsa.vector_ar.vecm import coint_johansen
 
 from model_util import facebook_prophet_filter, Callbacks, lstm_conv1d_model
-from utility import normalize, series_to_supervised, \
+from utility import normalize, find_index, \
     explore_data
 
 
@@ -134,6 +134,7 @@ class PowerForecaster:
         self.testing = normalized[normalized.index >= cutoff_date]
 
         self.df[ColumnNames.DATE_STAMP.value] = self.df.index
+        self.df_blocked = None
         self.train_test_split_ratio = train_test_split_ratio
         self.model_type = model
         self.train_X, self.test_X = self.train_test_split(self.df[features])
@@ -225,40 +226,42 @@ class PowerForecaster:
         df[column_name] = data
         return df
 
-    def find_index(self, start_date_st, end_date_st = None):
-        start_date = pd.to_datetime(start_date_st)
-        df = pd.DataFrame()
-        df['date'] = self.df.index
-        if end_date_st is None:
-            mask = (df['date'] >= start_date)
-        else:
-            end_date = pd.to_datetime(end_date_st)
-            mask = (df['date'] >= start_date) & (df['date'] < end_date)
 
-        index = df.loc[mask].index
-        return index[0], index[-1]
+    def block_after_date(self, start_block_date_st):
+        index, _ = find_index(self.df, start_block_date_st)
+        logging.debug("Index of block is {} with length of {}".format(index, len(self.df) - index))
+        self.df_blocked = self.df.iloc[index:]
+        self.df_blocked.reindex()
+        logging.info("Blocked from {} to {} fromo training and validation"
+                     .format(self.df_blocked.index[0], self.df_blocked.index[-1]))
 
-    def adjust_index_and_training_shift(self, training_duration_in_frequency, start_date_in_labeling_st,
-                                        start_date_training_st = None
+
+    def adjust_index_and_training_shift(self, start_date_in_labeling_st
+                                        , training_duration_in_frequency = None
+                                        , start_date_training_st = None
                                         ):
         logging.debug("Original range data of data: [{}-{}]".format(self.df.index[0], self.df.index[-1]))
-        index_start_labeling, _ = self.find_index(start_date_in_labeling_st)
+        index_start_labeling, _ = find_index(self.df, start_date_in_labeling_st)
         if start_date_training_st is not None:
-            index_start_training, _ = self.find_index(start_date_training_st)
+            index_start_training, _ = find_index(self.df, start_date_training_st)
             if index_start_labeling < index_start_training:
                 raise ValueError("Labeling should be after training")
             self.shift = index_start_labeling - index_start_training
         else:
             index_start_training = 0
             self.shift = index_start_labeling
-        final_index = index_start_training + training_duration_in_frequency + self.shift
-        logging.debug("start index: {}, final_index: {}".format(index_start_training, final_index))
-        self.df = self.df.iloc[index_start_training:index_start_training + training_duration_in_frequency + self.shift]
 
-        logging.info("Shift is set to be {}, we picked the slice of [{} : {}] for trainig".format(
-            self.shift, self.df.index[0]
-            , self.df.index[-1]
-        ))
+        if training_duration_in_frequency is None:
+            logging.info("Shift is set to be {}".format(self.shift))
+        else:
+            final_index = index_start_training + training_duration_in_frequency + self.shift
+            logging.debug("start index: {}, final_index: {}".format(index_start_training, final_index))
+            self.df = self.df.iloc[index_start_training:index_start_training + training_duration_in_frequency + self.shift]
+
+            logging.info("Shift is set to be {}, we picked the slice of [{} : {}] for trainig".format(
+                self.shift, self.df.index[0]
+                , self.df.index[-1]
+            ))
 
     def lstm_predict(self, model
                      , start_date_to_predict_st=None
@@ -267,7 +270,7 @@ class PowerForecaster:
         X, true_y = self.get_whole()
 
         if start_date_to_predict_st is not None:
-            y_index_i, _ = self.find_index(start_date_to_predict_st)
+            y_index_i, _ = find_index(self.df, start_date_to_predict_st)
             x_index_i = 0 if y_index_i <= self.shift else y_index_i - self.shift
             x_index_f = x_index_i + duration_in_freq
             y_index_f = y_index_i + duration_in_freq
@@ -407,7 +410,12 @@ class PowerForecaster:
         if self.do_shuffle:
             logging.debug('Random shuffeling')
         length = sliding_window_feature.shape[0]
-        logging.debug("sliding window length{}".format(length))
+        if self.df_blocked is not None:
+            length -= len(self.df_blocked)
+            logging.info("length of data reduced by {} due to blocking. The last date is {}"
+                         .format(len(self.df_blocked), self.df.index[length]))
+
+        logging.debug("sliding window length: {}".format(length))
 
         split_ratio = Constants.TRAIN_TEST_SPLIT_RATIO.value
         idx = np.random.choice(length, length, replace=False) if self.do_shuffle else np.arange(length)
