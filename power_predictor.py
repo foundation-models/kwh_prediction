@@ -1,3 +1,4 @@
+import logging
 from enum import Enum
 from math import sqrt
 
@@ -73,7 +74,8 @@ class PowerForecaster:
                  initial_epoch = Constants.INITIAL_EPOCH.value,
                  batch_size = Constants.BATCH_SIZE.value,
                  do_shuffle=True):
-        explore_data(df)
+        if logging.getLogger().isEnabledFor(logging.DEBUG):
+            explore_data(df)
         # first step is to create a timestamp column as index to turn it to a TimeSeries data
         df.index = pd.to_datetime(df[ColumnNames.DATE.value] + df[ColumnNames.TIME.value],
                                   format='%Y-%m-%d%H:%M:%S', errors='raise')
@@ -119,7 +121,7 @@ class PowerForecaster:
         self.testing = normalized[normalized.index >= cutoff_date]
 
 
-        self.df.loc[ColumnNames.DATE_STAMP.value] = self.df.index
+        self.df[ColumnNames.DATE_STAMP.value] = self.df.index
         self.train_test_split_ratio = train_test_split_ratio
         self.model = model
         self.train_X, self.test_X = self.train_test_split(self.df[features])
@@ -139,8 +141,8 @@ class PowerForecaster:
         self.train_size = None
         self.val_size = None
 
-        # if logging.getLogger().getEffectiveLevel() == logging.DEBUG:
-        explore_data(self.df)
+        if logging.getLogger().isEnabledFor(logging.DEBUG):
+            explore_data(self.df)
 
     def train_test_split(self, df):
         split_index = int(self.train_test_split_ratio * df.shape[0])

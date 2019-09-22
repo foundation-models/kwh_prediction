@@ -1,5 +1,4 @@
 import logging
-import unittest
 from unittest import TestCase
 
 import pandas as pd
@@ -10,17 +9,20 @@ from power_predictor import PowerForecaster, Models, Constants
 
 class TestPowerForecaster(TestCase):
     def setUp(self) -> None:
-        logging.addLevelName(logging.DEBUG, "TestDebug")
+        logging.getLogger().setLevel(logging.DEBUG)
         # self.df = pd.read_csv("https://drive.google.com/uc?export=download&id=1z2MBYJ8k4M5J3udlFVc2d8opE_f-S4BK")
         self.df = pd.read_csv("data/load_temperature_data.csv")
 
+
     def test_init(self):
         df = self.df.copy()
+        logging.getLogger().debug("1  Done init --- ")
         test_class = PowerForecaster(df)
         self.assertEqual(test_class.df.shape, (37920, 3))
         df = self.df.copy()
         test_class = PowerForecaster(df, upsample_freq='D')
         self.assertEqual(test_class.df.shape, (395, 3))
+        logging.getLogger().debug("2 Done init --- ")
 
     def test_visual_inspection(self):
         test_class = PowerForecaster(self.df)
