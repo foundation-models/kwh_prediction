@@ -17,40 +17,49 @@ class TestPowerForecaster(TestCase):
 
     def test_init(self):
         df = self.df.copy()
-        test_class = PowerForecaster(df)
-        self.assertEqual(test_class.df.shape, (37920, 3))
+        powerForecaster = PowerForecaster(df)
+        self.assertEqual(powerForecaster.df.shape, (37920, 3))
         df = self.df.copy()
-        test_class = PowerForecaster(df, upsample_freq='D')
-        self.assertEqual(test_class.df.shape, (395, 3))
+        powerForecaster = PowerForecaster(df, upsample_freq='D')
+        self.assertEqual(powerForecaster.df.shape, (395, 3))
 
     def test_visual_inspection(self):
-        test_class = PowerForecaster(self.df)
-        test_class.visual_inspection()
+        powerForecaster = PowerForecaster(self.df)
+        powerForecaster.visual_inspection()
         self.assertTrue(True)
 
+    def test_find_index(self):
+        powerForecaster = PowerForecaster(self.df)
+        i, j = powerForecaster.find_index('2012-12-01', '2013-01-01')
+        self.assertEqual(i, 2880)
+        self.assertEqual(j, 5855)
+
     def test_sliding_window(self):
-        test_class = PowerForecaster(self.df, Models.LSTM)
-        test_class.sliding_window()
+        powerForecaster = PowerForecaster(self.df, Models.LSTM)
+        powerForecaster.sliding_window()
         window_size = Constants.SLIDING_WINDOW_SIZE_OR_TIME_STEPS
-        self.assertEqual(test_class.shuffled_X.shape, (37920 - window_size, window_size))
+        self.assertEqual(powerForecaster.shuffled_X.shape, (37920 - window_size, window_size))
 
     def test_lstm(self):
         df = self.df.copy()
-        test_class = PowerForecaster(df, model=Models.LSTM,
+        powerForecaster = PowerForecaster(df, model=Models.LSTM,
                                      upsample_freq=Constants.RESAMPLING_FREQ.value)
-        test_class.sliding_window()
-        test_class.fit()
-        test_class.plot_history()
-        test_class.evaluate()
-        test_class.test_prediction()
-        #predicted = test_class.predict()
-        #test_class.plot_prediction(1000,1200)
+        powerForecaster.sliding_window()
+        powerForecaster.fit()
+        powerForecaster.plot_history()
+        powerForecaster.evaluate()
+        #powerForecaster.lstm_predict(powerForecaster.model_type.value)
+        powerForecaster.lstm_predict(powerForecaster.model_type.value,
+                                     start_index_to_predict=800, delta_index=200)
+
+        #predicted = powerForecaster.predict()
+        #powerForecaster.plot_prediction(1000,1200)
         self.assertTrue(True)
 
     def test_fit_predict(self):
-        test_class = PowerForecaster(self.df, Models.LSTM)
-        test_class.fit()
-        result = test_class.predict()
+        powerForecaster = PowerForecaster(self.df, Models.LSTM)
+        powerForecaster.fit()
+        result = powerForecaster.predict()
         plt.plot(result)
         self.assertTrue(True)
         plt.show()

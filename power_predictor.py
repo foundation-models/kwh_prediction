@@ -30,7 +30,7 @@ class Constants(Enum):
     # the following is for lstm model
     SLIDING_WINDOW_SIZE_OR_TIME_STEPS = 30
     RESAMPLING_FREQ = '8H'
-    FUTURE_TIME_STEPS = 3 * 7 # corresponding to 24 hours in future
+    SHIFT_IN_TIME_STEP_TO_PREDICT = 3 * 7  # corresponding to 24 hours in future
     FEATURE_SIZE = 2
     EPOCHS = 100
     NEURONS = 30
@@ -54,10 +54,10 @@ class ColumnNames(Enum):
     ORIGINAL_FEATURES = [POWER, TEMPERATURE]
 
 
-
 class Models(Enum):
     PROPHET = fbprophet.Prophet(changepoint_prior_scale=0.10, yearly_seasonality=True)
-    LSTM = lstm_conv1d_model(Constants.NEURONS.value, (Constants.SLIDING_WINDOW_SIZE_OR_TIME_STEPS.value, Constants.FEATURE_SIZE.value))
+    LSTM = lstm_conv1d_model(Constants.NEURONS.value,
+                             (Constants.SLIDING_WINDOW_SIZE_OR_TIME_STEPS.value, Constants.FEATURE_SIZE.value))
     ARIMA = sm.tsa.statespace.SARIMAX
     VAR = VAR
 
@@ -71,18 +71,20 @@ class PowerForecaster:
     """
 
     def __init__(self, df, model=Models.PROPHET,
-                 upsample_freq = None,
+                 upsample_freq=None,
                  train_test_split_ratio=Constants.TRAIN_TEST_SPLIT_RATIO.value,
-                 epochs = Constants.EPOCHS.value,
-                 initial_epoch = Constants.INITIAL_EPOCH.value,
-                 batch_size = Constants.BATCH_SIZE.value,
+                 epochs=Constants.EPOCHS.value,
+                 initial_epoch=Constants.INITIAL_EPOCH.value,
+                 batch_size=Constants.BATCH_SIZE.value,
+                 sliding_window_size_or_time_steps=Constants.SLIDING_WINDOW_SIZE_OR_TIME_STEPS.value,
                  do_shuffle=True):
-        logging.info("resample: {}. future_prediction: {}, epochs: {}, batch_size: {}, window_size: {}, eurons: {}"
+        logging.info("resample: {}. future_prediction: {}, epochs: {}, batch_size: {},"
+                     " window_size: {}, eurons: {}"
                      .format(Constants.RESAMPLING_FREQ.value
-                             , Constants.FUTURE_TIME_STEPS.value
-                             , Constants.EPOCHS.value
-                             , Constants.BATCH_SIZE.value
-                             , Constants.SLIDING_WINDOW_SIZE_OR_TIME_STEPS.value
+                             , Constants.SHIFT_IN_TIME_STEP_TO_PREDICT.value
+                             , epochs
+                             , batch_size
+                             , sliding_window_size_or_time_steps
                              , Constants.NEURONS.value
                              ))
         if logging.getLogger().isEnabledFor(logging.DEBUG):
@@ -113,9 +115,9 @@ class PowerForecaster:
 
         df = df.rename(columns={power: ColumnNames.LABEL.value})
         df.drop(columns=[ColumnNames.DATE.value,
-                 ColumnNames.TIME.value,
-                 ColumnNames.DAY_OF_WEEK.value,
-                 ColumnNames.MONTH.value],
+                         ColumnNames.TIME.value,
+                         ColumnNames.DAY_OF_WEEK.value,
+                         ColumnNames.MONTH.value],
                 inplace=True
                 )
         if upsample_freq is not None:
@@ -131,10 +133,9 @@ class PowerForecaster:
         self.df = normalized[normalized.index < cutoff_date]
         self.testing = normalized[normalized.index >= cutoff_date]
 
-
         self.df[ColumnNames.DATE_STAMP.value] = self.df.index
         self.train_test_split_ratio = train_test_split_ratio
-        self.model = model
+        self.model_type = model
         self.train_X, self.test_X = self.train_test_split(self.df[features])
         self.train_y, self.test_y = self.train_test_split(self.df[ColumnNames.LABELS.value])
         self.model_fit = None
@@ -160,26 +161,6 @@ class PowerForecaster:
         train = df.iloc[:split_index, :]
         test = df.iloc[split_index:, :]
         return train, test
-
-    def lstm_preprocess(self, df, freq=None):
-        upsampled = df if freq is None else df.resample(freq).sum()[ColumnNames.FEATURES.value]
-
-        # frame as supervised learning
-        reframed = series_to_supervised(upsampled[ColumnNames.FEATURES.value],
-                                        ColumnNames.FEATURES.value, ColumnNames.LABEL.value, 1, 1)
-        logging.debug(reframed.head())
-        # split into train and test sets
-        train, test = self.train_test_split(reframed)
-
-        # split into input and outputs
-        _train_X, self.train_y = train.iloc[:, :-1], train.iloc[:, -1]
-        _test_X, self.test_y = test.iloc[:, :-1], test.iloc[:, -1]
-        # reshape input to be 3D [samples, timesteps, features]
-        self.train_X = _train_X.values.reshape(
-            (_train_X.shape[0], Constants.SLIDING_WINDOW_SIZE_OR_TIME_STEPS.value, _train_X.shape[1]))
-        self.test_X = _test_X.values.reshape((_test_X.
-                                              shape[0], Constants.SLIDING_WINDOW_SIZE_OR_TIME_STEPS.value, _test_X.shape[1]))
-        logging.debug(self.train_X.shape, self.train_y.shape, self.test_X.shape, self.test_y.shape)
 
     def stationary_test(self):
         dataset = self.test_y.dropna()
@@ -217,26 +198,26 @@ class PowerForecaster:
         plt.show()
 
     def fit(self):
-        if self.model == Models.PROPHET:
+        if self.model_type == Models.PROPHET:
             self.prophet_fit()
-        elif self.model == Models.ARIMA:
+        elif self.model_type == Models.ARIMA:
             self.arima_fit()
-        elif self.model == Models.VAR:
+        elif self.model_type == Models.VAR:
             self.var_fit()
-        elif self.model == Models.LSTM:
+        elif self.model_type == Models.LSTM:
             self.lstm_fit()
         else:
-            raise ValueError("{} is not defined".format(self.model))
-        
+            raise ValueError("{} is not defined".format(self.model_type))
+
     def evaluate(self):
-        self.loss_metrics = self.model.value.evaluate(
+        self.loss_metrics = self.model_type.value.evaluate(
             self.val_X,
             self.val_y,
             batch_size=self.batch_size,
             verbose=0
         )
 
-        logging.info("Metric names:{}".format(self.model.value.metrics_names))
+        logging.info("Metric names:{}".format(self.model_type.value.metrics_names))
         logging.info("Loss Metrics:{}".format(self.loss_metrics))
 
     def resultToDataFrame(self, data, size, column_name):
@@ -244,23 +225,47 @@ class PowerForecaster:
         df[column_name] = data
         return df
 
+    def find_index(self, start_date_st, end_date_st):
+        start_date = pd.to_datetime(start_date_st)
+        end_date = pd.to_datetime(end_date_st)
+        df = pd.DataFrame()
+        df['date'] = self.df.index
+        mask = (df['date'] >= start_date) & (df['date'] < end_date)
 
-    def test_prediction(self):
-        X, Y = self.get_whole()
-        predicted = self.model.value.predict(X)
-        logging.debug(predicted.shape)
-        # predicted_BP = self.scaleBack(predicted.flatten(), data_train.shape[0])
+        index = df.loc[mask].index
+        return index[0], index[-1]
 
-        df = self.df
-        label_column = ColumnNames.LABEL.value
-        label = df[label_column]
-        logging.info('Model {}'.format(Constants.MODEL_NAME.value))
-        logging.info('ecpochs: {}'.format(self.epochs))
+    def lstm_predict(self, model
+                     , start_index_to_predict=None
+                     , delta_index = Constants.SHIFT_IN_TIME_STEP_TO_PREDICT.value):
+        X, true_y = self.get_whole()
+
+        shift = Constants.SHIFT_IN_TIME_STEP_TO_PREDICT.value
+        # import pdb; pdb.set_trace()
+        if start_index_to_predict is not None:
+            y_index_i = start_index_to_predict
+            y_index_f = start_index_to_predict + delta_index
+            x_index_i = 0 if y_index_i <= shift else y_index_i - shift
+            x_index_f = x_index_i + delta_index
+
+            logging.info("Predicting time slice [{} : {}] from [{} : {}]".format(
+                self.df.index[y_index_i],self.df.index[y_index_f]
+                , self.df.index[x_index_i], self.df.index[x_index_f]
+            ))
+
+            X = X[x_index_i:x_index_f]
+            true_y = true_y[y_index_i:y_index_f]
+
+        predicted = model.predict(X)
+        logging.debug("Predicted Labels shape: {}".format(predicted.shape))
+
         plt.plot(predicted, 'r')
-        plt.plot(Y, 'b')
+        plt.plot(true_y, 'b')
         plt.show()
+
+        label_column = ColumnNames.LABEL.value
         # for snapshot record, logging.debug these too
-        df_predicted = self.resultToDataFrame(predicted, Y.shape[0], label_column)
+        df_predicted = self.resultToDataFrame(predicted, true_y.shape[0], label_column)
         df_scaled_predicted = self.scaled_back(df_predicted, label_column)
         plt.scatter(df_scaled_predicted.index, df_scaled_predicted[label_column], c='r', alpha=0.1)
         plt.show()
@@ -276,7 +281,7 @@ class PowerForecaster:
     def prophet_fit(self):
         past = self.train_y.copy()
         past[ColumnNames.DATE_STAMP.value] = self.train_y.index
-        self.model.value.fit(past)
+        self.model_type.value.fit(past)
 
     def arima_fit(self):
         model = sm.tsa.statespace.SARIMAX(self.train_y,
@@ -284,7 +289,7 @@ class PowerForecaster:
                                           seasonal_order=Constants.SARIMAX_SEASONAL_ORDER.value)
         # ,enforce_stationarity=False, enforce_invertibility=False, freq='15T')
         logging.debug("SARIMAX fitting ....")
-        self.model_fit = self.model.value.fit()
+        self.model_fit = self.model_type.value.fit()
         self.model_fit.summary()
         logging.debug("SARIMAX forecast", self.model_fit.forecast())
 
@@ -292,17 +297,17 @@ class PowerForecaster:
         logging.debug("making VAR model")
         model = VAR(endog=self.train_X[ColumnNames.FEATURES.value].dropna())
         logging.debug("VAR fitting ....")
-        self.model_fit = self.model.value.fit()
+        self.model_fit = self.model_type.value.fit()
         self.model_fit.summary()
 
     def lstm_fit(self):
         if logging.getLogger().isEnabledFor(logging.INFO):
-            print(self.model.value.summary())
+            print(self.model_type.value.summary())
 
         callbacks = Callbacks(Constants.MODEL_NAME.value, self.batch_size, self.epochs)
         X, y = self.get_shuff_train_label()
 
-        self.history = self.model.value.fit(
+        self.history = self.model_type.value.fit(
             X,
             y,
             epochs=self.epochs,
@@ -318,28 +323,28 @@ class PowerForecaster:
     def predict(self, feature_set=None):
         future = feature_set if feature_set is not None \
             else Constants.DEFAULT_FUTURE_PERIODS.value
-        if self.model == Models.PROPHET:
-            self.future = self.model.value.make_future_dataframe(periods=future,
-                                                                 freq=Constants.DEFAULT_FUTURE_FREQ.value,
-                                                                 include_history=False)
+        if self.model_type == Models.PROPHET:
+            self.future = self.model_type.value.make_future_dataframe(periods=future,
+                                                                      freq=Constants.DEFAULT_FUTURE_FREQ.value,
+                                                                      include_history=False)
 
-        if self.model == Models.PROPHET:
-            predicted = self.model.value.predict(self.future)
+        if self.model_type == Models.PROPHET:
+            predicted = self.model_type.value.predict(self.future)
             predicted[ColumnNames.LABEL.value] = predicted[ColumnNames.FORECAST.value]
-        elif self.model == Models.ARIMA:
+        elif self.model_type == Models.ARIMA:
             predicted = self.arima_predict(future)
-        elif self.model == Models.VAR:
+        elif self.model_type == Models.VAR:
             predicted = self.var_predict(future)
-        elif self.model == Models.LSTM:
+        elif self.model_type == Models.LSTM:
             if feature_set is None:
                 future = self.test_X
-            #X = np.expand_dims(future, axis=-1)
+            # X = np.expand_dims(future, axis=-1)
             X = future
-            predicted = self.model.value.predict(X)
+            predicted = self.model_type.value.predict(X)
             predicted = self.resultToDataFrame(predicted)
             logging.info("Error from prediction: {}".format(mean_squared_error(predicted, future)))
         else:
-            raise ValueError("{} is not defined".format(self.model))
+            raise ValueError("{} is not defined".format(self.model_type))
 
         return predicted
 
@@ -361,7 +366,7 @@ class PowerForecaster:
         # Generate the data matrix
         length0 = self.df.shape[0]
         window_size = Constants.SLIDING_WINDOW_SIZE_OR_TIME_STEPS.value
-        future_time_steps = Constants.FUTURE_TIME_STEPS.value
+        future_time_steps = Constants.SHIFT_IN_TIME_STEP_TO_PREDICT.value
         features_column = ColumnNames.FEATURES.value
         label_column = ColumnNames.LABEL.value
 
@@ -401,14 +406,14 @@ class PowerForecaster:
         self.val_size = length - self.train_size
 
     def get_shuff_train_label(self):
-        X = self.shuffled_X #np.expand_dims(self.shuffled_X, axis=-1)
+        X = self.shuffled_X  # np.expand_dims(self.shuffled_X, axis=-1)
         Y = self.shuffled_y
         return X, Y
 
     def evaluate_performance(self):
         # make a prediction
-        X = self.test_X # np.expand_dims(self.test_X, axis=-1)
-        yhat = self.model.value.predict(X)
+        X = self.test_X  # np.expand_dims(self.test_X, axis=-1)
+        yhat = self.model_type.value.predict(X)
         test_X = self.test_X.reshape((self.test_X.shape[0], self.test_X.shape[2]))
         # invert scaling for forecast
         inv_yhat = pd.concatenate((yhat, test_X[:, 1:]), axis=1)
@@ -423,10 +428,9 @@ class PowerForecaster:
         rmse = sqrt(mean_squared_error(inv_y, inv_yhat))
         logging.debug('Test RMSE: %.3f' % rmse)
 
-
     def plot_future(self, predicted):
-        self.model.value.plot(predicted, xlabel='Date', ylabel='KWH')
-        self.model.value.plot_components(predicted)
+        self.model_type.value.plot(predicted, xlabel='Date', ylabel='KWH')
+        self.model_type.value.plot_components(predicted)
 
     #        by_dow.plot(xticks=ticks, style=style, title='Averaged on Days of the Week')
     #        plt.show()
@@ -478,20 +482,20 @@ class PowerForecaster:
         style = [':', '--', '-']
         pd.plotting.register_matplotlib_converters()
         label_column = ColumnNames.LABELS.value
-        #import pdb; pdb.set_trace()
+        # import pdb; pdb.set_trace()
 
         t = self.train.index.iloc[start_index:end_index]
         X = self.train.iloc[start_index: end_index]
         true_y = self.label.iloc[start_index, end_index]
-        y = self.model.value.predict(X)
+        y = self.model_type.value.predict(X)
 
         plt.plot(t, y, true_y, style=style)
         plt.show()
 
     def plot_history(self):
-        plt.plot(np.arange(self.epochs - self.initial_epoch), 
+        plt.plot(np.arange(self.epochs - self.initial_epoch),
                  self.history.history['loss'], label='train')
-        plt.plot(np.arange(self.epochs - self.initial_epoch), 
+        plt.plot(np.arange(self.epochs - self.initial_epoch),
                  self.history.history['val_loss'], label='validation')
         plt.legend()
         plt.title('model accuracy')
@@ -522,7 +526,7 @@ class PowerForecaster:
 
     def get_whole(self):
         # get whole, for validation set
-        X = self.train[:,:] #np.expand_dims(self.train[:, :], axis=-1)
+        X = self.train[:, :]  # np.expand_dims(self.train[:, :], axis=-1)
         Y = self.label[:, :]
         return X, Y
 
@@ -549,3 +553,27 @@ class ModelEvaluator:
             size = len(y_test)
             plt.xlim(size - 1000, size)
             plt.show()
+
+
+"""
+
+    def lstm_preprocess(self, df, freq=None):
+        upsampled = df if freq is None else df.resample(freq).sum()[ColumnNames.FEATURES.value]
+
+        # frame as supervised learning
+        reframed = series_to_supervised(upsampled[ColumnNames.FEATURES.value],
+                                        ColumnNames.FEATURES.value, ColumnNames.LABEL.value, 1, 1)
+        logging.debug(reframed.head())
+        # split into train and test sets
+        train, test = self.train_test_split(reframed)
+
+        # split into input and outputs
+        _train_X, self.train_y = train.iloc[:, :-1], train.iloc[:, -1]
+        _test_X, self.test_y = test.iloc[:, :-1], test.iloc[:, -1]
+        # reshape input to be 3D [samples, timesteps, features]
+        self.train_X = _train_X.values.reshape(
+            (_train_X.shape[0], Constants.SLIDING_WINDOW_SIZE_OR_TIME_STEPS.value, _train_X.shape[1]))
+        self.test_X = _test_X.values.reshape((_test_X.
+                                              shape[0], Constants.SLIDING_WINDOW_SIZE_OR_TIME_STEPS.value, _test_X.shape[1]))
+        logging.debug(self.train_X.shape, self.train_y.shape, self.test_X.shape, self.test_y.shape)
+"""
