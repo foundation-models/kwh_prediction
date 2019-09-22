@@ -29,8 +29,8 @@ class Constants(Enum):
     SARIMAX_SEASONAL_ORDER = (0, 0, 0, 0, 12)
     # the following is for lstm model
     SLIDING_WINDOW_SIZE_OR_TIME_STEPS = 20
-    RESAMPLING_FREQ = '12H'
-    FUTURE_TIME_STEPS = 2 # corresponding to 24 hours in future
+    RESAMPLING_FREQ = '8H'
+    FUTURE_TIME_STEPS = 3 # corresponding to 24 hours in future
     FEATURE_SIZE = 2
     EPOCHS = 100
     NEURONS = 20
@@ -52,6 +52,7 @@ class ColumnNames(Enum):
     FEATURES = [LABEL, TEMPERATURE]
     LABELS = [LABEL]
     ORIGINAL_FEATURES = [POWER, TEMPERATURE]
+
 
 
 class Models(Enum):
@@ -76,6 +77,11 @@ class PowerForecaster:
                  initial_epoch = Constants.INITIAL_EPOCH.value,
                  batch_size = Constants.BATCH_SIZE.value,
                  do_shuffle=True):
+        logging.info("resample: {}. future_prediction: {}, epochs: {}, batch_size: {}"
+                     .format(Constants.RESAMPLING_FREQ.value,
+                             Constants.FUTURE_TIME_STEPS.value,
+                             Constants.EPOCHS.value,
+                             Constants.BATCH_SIZE.value))
         if logging.getLogger().isEnabledFor(logging.DEBUG):
             explore_data(df)
         # first step is to create a timestamp column as index to turn it to a TimeSeries data
