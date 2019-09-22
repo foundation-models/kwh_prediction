@@ -29,10 +29,10 @@ class Constants(Enum):
     # the following is for lstm model
     SLIDING_WINDOW_SIZE_OR_TIME_STEPS = 10
     FEATURE_SIZE = 2
-    EPOCHS = 1
-    NEURONS = 10
+    EPOCHS = 10
+    NEURONS = 20
     INITIAL_EPOCH = 0
-    BATCH_SIZE = 10
+    BATCH_SIZE = 1
     MODEL_NAME = 'lstm'
 
 
@@ -279,12 +279,7 @@ class PowerForecaster:
             initial_epoch=self.initial_epoch,
 
         )
-
-        plt.plot(np.arange(self.epochs - self.initial_epoch)
-                 , self.history.history['loss'], label='train')
-        plt.plot(np.arange(self.epochs - self.initial_epoch)
-                 , self.history.history['val_loss'], label='validation')
-        plt.legend()
+        print(self.history.history)
 
     def predict(self, feature_set=None):
         future = feature_set if feature_set is not None \
