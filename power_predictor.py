@@ -30,10 +30,10 @@ class Constants(Enum):
     # the following is for lstm model
     SLIDING_WINDOW_SIZE_OR_TIME_STEPS = 20
     RESAMPLING_FREQ = '8H'
-    FUTURE_TIME_STEPS = 3 # corresponding to 24 hours in future
+    FUTURE_TIME_STEPS = 3 * 7 # corresponding to 24 hours in future
     FEATURE_SIZE = 2
     EPOCHS = 100
-    NEURONS = 20
+    NEURONS = 30
     INITIAL_EPOCH = 0
     BATCH_SIZE = 20
     MODEL_NAME = 'lstm'
@@ -77,11 +77,13 @@ class PowerForecaster:
                  initial_epoch = Constants.INITIAL_EPOCH.value,
                  batch_size = Constants.BATCH_SIZE.value,
                  do_shuffle=True):
-        logging.info("resample: {}. future_prediction: {}, epochs: {}, batch_size: {}"
-                     .format(Constants.RESAMPLING_FREQ.value,
-                             Constants.FUTURE_TIME_STEPS.value,
-                             Constants.EPOCHS.value,
-                             Constants.BATCH_SIZE.value))
+        logging.info("resample: {}. future_prediction: {}, epochs: {}, batch_size: {}, eurons: {}"
+                     .format(Constants.RESAMPLING_FREQ.value
+                             , Constants.FUTURE_TIME_STEPS.value
+                             , Constants.EPOCHS.value
+                             , Constants.BATCH_SIZE.value
+                             , Constants.NEURONS.value
+                             ))
         if logging.getLogger().isEnabledFor(logging.DEBUG):
             explore_data(df)
         # first step is to create a timestamp column as index to turn it to a TimeSeries data

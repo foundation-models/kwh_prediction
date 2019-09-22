@@ -1,9 +1,21 @@
+import logging
 from math import sqrt
 
 import pandas as pd
 from sklearn.metrics import mean_squared_error
 from sklearn.preprocessing import QuantileTransformer
 
+
+def set_logging(log_path, file_name):
+    logFormatter = logging.Formatter("%(asctime)s [%(threadName)-12.12s] [%(levelname)-5.5s]  %(message)s")
+    rootLogger = logging.getLogger()
+    fileHandler = logging.FileHandler("{0}/{1}.log".format(log_path, file_name))
+    fileHandler.setFormatter(logFormatter)
+    rootLogger.addHandler(fileHandler)
+    consoleHandler = logging.StreamHandler()
+    consoleHandler.setFormatter(logFormatter)
+    rootLogger.addHandler(consoleHandler)
+    rootLogger.setLevel(logging.DEBUG)
 
 
 
