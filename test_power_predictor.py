@@ -15,8 +15,12 @@ class TestPowerForecaster(TestCase):
         self.df = pd.read_csv("data/load_temperature_data.csv")
 
     def test_init(self):
-        test_class = PowerForecaster(self.df)
-        self.assertEqual(test_class.df.shape, (37920, 8))
+        df = self.df.copy()
+        test_class = PowerForecaster(df)
+        self.assertEqual(test_class.df.shape, (37920, 3))
+        df = self.df.copy()
+        test_class = PowerForecaster(df, upsample_freq='D')
+        self.assertEqual(test_class.df.shape, (395, 3))
 
     def test_visual_inspection(self):
         test_class = PowerForecaster(self.df)
@@ -30,11 +34,11 @@ class TestPowerForecaster(TestCase):
         self.assertEqual(test_class.shuffled_X.shape, (37920 - window_size, window_size))
 
     def test_lstm(self):
-        df = self.df
-        test_class = PowerForecaster(df, model=Models.LSTM)
+        df = self.df.copy()
+        test_class = PowerForecaster(df, model=Models.LSTM, upsample_freq='12H')
         test_class.sliding_window()
         test_class.fit()
-        #test_class.plot_history()
+        test_class.plot_history()
         #test_class.evaluate()
         #test_class.test_prediction()
         #predicted = test_class.predict()

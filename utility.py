@@ -75,6 +75,7 @@ def explore_data(df):
     print("Is there null values in the data?", df.isnull().values.any())
     print("Columns with missing values: ", df.columns[df.isnull().any()])
     print("Columns with no value at all: ", df.columns[(df == 0).all()])
+    print("Number of missing data:\n", df.isna().sum())
     print(separator)
     print(df.describe())
     print(separator)

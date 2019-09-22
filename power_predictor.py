@@ -43,6 +43,8 @@ class ColumnNames(Enum):
     FORECAST = 'yhat'  # FbProphet & VAR use this name and it should be numeric
     DATE = 'date'
     TIME = 'time'
+    MONTH = 'month'
+    DAY_OF_WEEK = 'dow'
     DATE_STAMP = 'ds'  # Facebook Prophet requires this name
     FEATURES = [LABEL, TEMPERATURE]
     LABELS = [LABEL]
@@ -65,15 +67,17 @@ class PowerForecaster:
     """
 
     def __init__(self, df, model=Models.PROPHET,
+                 upsample_freq = None,
                  train_test_split_ratio=Constants.TRAIN_TEST_SPLIT_RATIO.value,
                  epochs = Constants.EPOCHS.value,
                  initial_epoch = Constants.INITIAL_EPOCH.value,
                  batch_size = Constants.BATCH_SIZE.value,
                  do_shuffle=True):
-        # explore_data(df)
+        explore_data(df)
         # first step is to create a timestamp column as index to turn it to a TimeSeries data
         df.index = pd.to_datetime(df[ColumnNames.DATE.value] + df[ColumnNames.TIME.value],
                                   format='%Y-%m-%d%H:%M:%S', errors='raise')
+        df.drop('Unnamed: 0', axis=1, inplace=True)
 
         # keep a copy of original dataset for future comparison
         self.df_original = df.copy()
@@ -85,8 +89,24 @@ class PowerForecaster:
         interpolated_df.index = df.index
         df[[temperature]] = interpolated_df[[ColumnNames.FORECAST.value]]
 
+        # lets also interpolate missing kwh using facebook prophet (or we could simply drop them)
+
         # now turn to kwh and make the format compatible with prophet
-        df = df.rename(columns={ColumnNames.POWER.value: ColumnNames.LABEL.value})
+        power = ColumnNames.POWER.value
+        interpolated_df = facebook_prophet_filter(df, temperature,
+                                                  Constants.FORECASTED_TEMPERATURE_FILE.value)
+        interpolated_df.index = df.index
+        df[[power]] = interpolated_df[[ColumnNames.FORECAST.value]]
+
+        df = df.rename(columns={power: ColumnNames.LABEL.value})
+        df.drop(columns=[ColumnNames.DATE.value,
+                 ColumnNames.TIME.value,
+                 ColumnNames.DAY_OF_WEEK.value,
+                 ColumnNames.MONTH.value],
+                inplace=True
+                )
+        if upsample_freq is not None:
+            df = df.resample(upsample_freq).mean()
 
         # for any regression or forecasting it is better to work with normalized data
         self.transformer = QuantileTransformer()  # handle outliers better than MinMaxScalar
@@ -98,7 +118,8 @@ class PowerForecaster:
         self.df = normalized[normalized.index < cutoff_date]
         self.testing = normalized[normalized.index >= cutoff_date]
 
-        self.df[ColumnNames.DATE_STAMP.value] = self.df.index
+
+        self.df.loc[ColumnNames.DATE_STAMP.value] = self.df.index
         self.train_test_split_ratio = train_test_split_ratio
         self.model = model
         self.train_X, self.test_X = self.train_test_split(self.df[features])
@@ -214,7 +235,7 @@ class PowerForecaster:
     def test_prediction(self):
         X, Y = self.get_whole()
         predicted = self.model.value.predict(X)
-        print(predicted.shape)
+        print("Predicted shape ",predicted.shape)
         # predicted_BP = self.scaleBack(predicted.flatten(), data_train.shape[0])
 
         df = self.df
@@ -279,7 +300,7 @@ class PowerForecaster:
             initial_epoch=self.initial_epoch,
 
         )
-        print(self.history.history)
+        print("history of performance:", self.history.history)
 
     def predict(self, feature_set=None):
         future = feature_set if feature_set is not None \
