@@ -378,3 +378,65 @@ Use tf.where in 2.0, which has the same broadcast rule as np.where
 2019-09-22 21:14:01,737 [MainThread  ] [DEBUG]  findfont: Matching :family=sans-serif:style=normal:variant=normal:weight=normal:stretch=normal:size=10.0 to DejaVu Sans ('/usr/local/lib/python3.5/dist-packages/matplotlib/mpl-data/fonts/ttf/DejaVuSans.ttf') with score of 0.050000.
 2019-09-22 21:14:01,823 [MainThread  ] [DEBUG]  findfont: Matching :family=sans-serif:style=normal:variant=normal:weight=normal:stretch=normal:size=12.0 to DejaVu Sans ('/usr/local/lib/python3.5/dist-packages/matplotlib/mpl-data/fonts/ttf/DejaVuSans.ttf') with score of 0.050000.
 2019-09-22 21:14:01,834 [MainThread  ] [DEBUG]  update_title_pos
+2019-09-22 21:15:48,421 [MainThread  ] [INFO ]  resample: 8H. future_prediction: 21, epochs: 100, batch_size: 20, window_size: 30, eurons: 30
+2019-09-22 21:15:49,123 [MainThread  ] [DEBUG]  update_title_pos
+2019-09-22 21:15:49,141 [MainThread  ] [DEBUG]  findfont: Matching :family=sans-serif:style=normal:variant=normal:weight=normal:stretch=normal:size=10.0 to DejaVu Sans ('/usr/local/lib/python3.5/dist-packages/matplotlib/mpl-data/fonts/ttf/DejaVuSans.ttf') with score of 0.050000.
+2019-09-22 21:15:49,227 [MainThread  ] [DEBUG]  findfont: Matching :family=sans-serif:style=normal:variant=normal:weight=normal:stretch=normal:size=12.0 to DejaVu Sans ('/usr/local/lib/python3.5/dist-packages/matplotlib/mpl-data/fonts/ttf/DejaVuSans.ttf') with score of 0.050000.
+2019-09-22 21:15:49,238 [MainThread  ] [DEBUG]  update_title_pos
+2019-09-22 21:16:42,201 [MainThread  ] [INFO ]  resample: 8H. future_prediction: 21, epochs: 100, batch_size: 20, window_size: 30, eurons: 30
+2019-09-22 21:16:43,032 [MainThread  ] [DEBUG]  update_title_pos
+2019-09-22 21:16:43,056 [MainThread  ] [DEBUG]  findfont: Matching :family=sans-serif:style=normal:variant=normal:weight=normal:stretch=normal:size=10.0 to DejaVu Sans ('/usr/local/lib/python3.5/dist-packages/matplotlib/mpl-data/fonts/ttf/DejaVuSans.ttf') with score of 0.050000.
+2019-09-22 21:16:43,167 [MainThread  ] [DEBUG]  findfont: Matching :family=sans-serif:style=normal:variant=normal:weight=normal:stretch=normal:size=12.0 to DejaVu Sans ('/usr/local/lib/python3.5/dist-packages/matplotlib/mpl-data/fonts/ttf/DejaVuSans.ttf') with score of 0.050000.
+2019-09-22 21:16:43,175 [MainThread  ] [DEBUG]  update_title_pos
+2019-09-22 21:17:11,928 [MainThread  ] [INFO ]  resample: 8H. future_prediction: 21, epochs: 100, batch_size: 20, window_size: 30, eurons: 30
+2019-09-22 21:17:12,762 [MainThread  ] [DEBUG]  update_title_pos
+2019-09-22 21:17:12,784 [MainThread  ] [DEBUG]  findfont: Matching :family=sans-serif:style=normal:variant=normal:weight=normal:stretch=normal:size=10.0 to DejaVu Sans ('/usr/local/lib/python3.5/dist-packages/matplotlib/mpl-data/fonts/ttf/DejaVuSans.ttf') with score of 0.050000.
+2019-09-22 21:17:12,896 [MainThread  ] [DEBUG]  findfont: Matching :family=sans-serif:style=normal:variant=normal:weight=normal:stretch=normal:size=12.0 to DejaVu Sans ('/usr/local/lib/python3.5/dist-packages/matplotlib/mpl-data/fonts/ttf/DejaVuSans.ttf') with score of 0.050000.
+2019-09-22 21:17:12,905 [MainThread  ] [DEBUG]  update_title_pos
+2019-09-22 21:30:43,344 [MainThread  ] [INFO ]  resample: 8H. future_prediction: 21, epochs: 100, batch_size: 20, window_size: 30, eurons: 30
+2019-09-22 21:30:44,042 [MainThread  ] [DEBUG]  update_title_pos
+2019-09-22 21:30:44,059 [MainThread  ] [DEBUG]  findfont: Matching :family=sans-serif:style=normal:variant=normal:weight=normal:stretch=normal:size=10.0 to DejaVu Sans ('/usr/local/lib/python3.5/dist-packages/matplotlib/mpl-data/fonts/ttf/DejaVuSans.ttf') with score of 0.050000.
+2019-09-22 21:30:44,165 [MainThread  ] [DEBUG]  findfont: Matching :family=sans-serif:style=normal:variant=normal:weight=normal:stretch=normal:size=12.0 to DejaVu Sans ('/usr/local/lib/python3.5/dist-packages/matplotlib/mpl-data/fonts/ttf/DejaVuSans.ttf') with score of 0.050000.
+2019-09-22 21:30:44,174 [MainThread  ] [DEBUG]  update_title_pos
+2019-09-22 21:31:03,576 [MainThread  ] [INFO ]  resample: 8H. future_prediction: 21, epochs: 100, batch_size: 20, window_size: 30, eurons: 30
+2019-09-22 21:31:04,238 [MainThread  ] [DEBUG]  update_title_pos
+2019-09-22 21:31:04,257 [MainThread  ] [DEBUG]  findfont: Matching :family=sans-serif:style=normal:variant=normal:weight=normal:stretch=normal:size=10.0 to DejaVu Sans ('/usr/local/lib/python3.5/dist-packages/matplotlib/mpl-data/fonts/ttf/DejaVuSans.ttf') with score of 0.050000.
+2019-09-22 21:31:04,370 [MainThread  ] [DEBUG]  findfont: Matching :family=sans-serif:style=normal:variant=normal:weight=normal:stretch=normal:size=12.0 to DejaVu Sans ('/usr/local/lib/python3.5/dist-packages/matplotlib/mpl-data/fonts/ttf/DejaVuSans.ttf') with score of 0.050000.
+2019-09-22 21:31:04,377 [MainThread  ] [DEBUG]  update_title_pos
+2019-09-22 21:32:29,978 [MainThread  ] [INFO ]  resample: 8H. future_prediction: 21, epochs: 100, batch_size: 20, window_size: 30, eurons: 30
+2019-09-22 21:34:17,627 [MainThread  ] [INFO ]  resample: 8H. future_prediction: 21, epochs: 100, batch_size: 20, window_size: 30, eurons: 30
+2019-09-22 21:35:09,765 [MainThread  ] [INFO ]  resample: 8H. future_prediction: 21, epochs: 100, batch_size: 20, window_size: 30, eurons: 30
+2019-09-22 21:36:51,509 [MainThread  ] [INFO ]  resample: 8H. future_prediction: 21, epochs: 100, batch_size: 20, window_size: 30, eurons: 30
+2019-09-22 21:37:59,895 [MainThread  ] [INFO ]  resample: 8H. future_prediction: 21, epochs: 100, batch_size: 20, window_size: 30, eurons: 30
+2019-09-22 21:41:59,460 [MainThread  ] [INFO ]  resample: 8H. future_prediction: 21, epochs: 100, batch_size: 20, window_size: 30, eurons: 30
+2019-09-22 21:44:09,585 [MainThread  ] [INFO ]  resample: 8H. future_prediction: 21, epochs: 100, batch_size: 20, window_size: 30, eurons: 30
+2019-09-22 21:44:54,363 [MainThread  ] [INFO ]  resample: 8H. future_prediction: 21, epochs: 100, batch_size: 20, window_size: 30, eurons: 30
+2019-09-22 21:45:43,540 [MainThread  ] [INFO ]  resample: 8H. future_prediction: 21, epochs: 100, batch_size: 20, window_size: 30, eurons: 30
+2019-09-22 21:45:47,420 [MainThread  ] [DEBUG]  update_title_pos
+2019-09-22 21:45:47,432 [MainThread  ] [DEBUG]  findfont: Matching :family=sans-serif:style=normal:variant=normal:weight=normal:stretch=normal:size=10.0 to DejaVu Sans ('/usr/local/lib/python3.5/dist-packages/matplotlib/mpl-data/fonts/ttf/DejaVuSans.ttf') with score of 0.050000.
+2019-09-22 21:45:47,514 [MainThread  ] [DEBUG]  update_title_pos
+2019-09-22 21:51:19,061 [MainThread  ] [INFO ]  resample: 8H. future_prediction: 21, epochs: 100, batch_size: 20, window_size: 30, eurons: 30
+2019-09-22 21:51:19,668 [MainThread  ] [DEBUG]  update_title_pos
+2019-09-22 21:51:19,678 [MainThread  ] [DEBUG]  findfont: Matching :family=sans-serif:style=normal:variant=normal:weight=normal:stretch=normal:size=10.0 to DejaVu Sans ('/usr/local/lib/python3.5/dist-packages/matplotlib/mpl-data/fonts/ttf/DejaVuSans.ttf') with score of 0.050000.
+2019-09-22 21:51:19,754 [MainThread  ] [DEBUG]  update_title_pos
+2019-09-22 21:52:05,571 [MainThread  ] [INFO ]  resample: 8H. future_prediction: 21, epochs: 100, batch_size: 20, window_size: 30, eurons: 30
+2019-09-22 21:53:07,826 [MainThread  ] [INFO ]  resample: 8H. future_prediction: 21, epochs: 100, batch_size: 20, window_size: 30, eurons: 30
+2019-09-22 21:53:08,438 [MainThread  ] [DEBUG]  update_title_pos
+2019-09-22 21:53:08,450 [MainThread  ] [DEBUG]  findfont: Matching :family=sans-serif:style=normal:variant=normal:weight=normal:stretch=normal:size=10.0 to DejaVu Sans ('/usr/local/lib/python3.5/dist-packages/matplotlib/mpl-data/fonts/ttf/DejaVuSans.ttf') with score of 0.050000.
+2019-09-22 21:53:08,530 [MainThread  ] [DEBUG]  update_title_pos
+2019-09-22 21:55:33,114 [MainThread  ] [INFO ]  resample: 8H. future_prediction: 21, epochs: 100, batch_size: 20, window_size: 30, eurons: 30
+2019-09-22 21:55:33,795 [MainThread  ] [DEBUG]  update_title_pos
+2019-09-22 21:55:33,812 [MainThread  ] [DEBUG]  findfont: Matching :family=sans-serif:style=normal:variant=normal:weight=normal:stretch=normal:size=10.0 to DejaVu Sans ('/usr/local/lib/python3.5/dist-packages/matplotlib/mpl-data/fonts/ttf/DejaVuSans.ttf') with score of 0.050000.
+2019-09-22 21:55:33,917 [MainThread  ] [DEBUG]  update_title_pos
+2019-09-22 21:56:25,978 [MainThread  ] [INFO ]  resample: 8H. future_prediction: 21, epochs: 100, batch_size: 20, window_size: 30, eurons: 30
+2019-09-22 21:56:26,656 [MainThread  ] [DEBUG]  update_title_pos
+2019-09-22 21:56:26,674 [MainThread  ] [DEBUG]  findfont: Matching :family=sans-serif:style=normal:variant=normal:weight=normal:stretch=normal:size=10.0 to DejaVu Sans ('/usr/local/lib/python3.5/dist-packages/matplotlib/mpl-data/fonts/ttf/DejaVuSans.ttf') with score of 0.050000.
+2019-09-22 21:56:26,778 [MainThread  ] [DEBUG]  update_title_pos
+2019-09-22 22:00:03,796 [MainThread  ] [INFO ]  resample: 8H. future_prediction: 21, epochs: 100, batch_size: 20, window_size: 30, eurons: 30
+2019-09-22 22:00:04,475 [MainThread  ] [DEBUG]  update_title_pos
+2019-09-22 22:00:04,492 [MainThread  ] [DEBUG]  findfont: Matching :family=sans-serif:style=normal:variant=normal:weight=normal:stretch=normal:size=10.0 to DejaVu Sans ('/usr/local/lib/python3.5/dist-packages/matplotlib/mpl-data/fonts/ttf/DejaVuSans.ttf') with score of 0.050000.
+2019-09-22 22:00:04,600 [MainThread  ] [DEBUG]  update_title_pos
+2019-09-22 22:03:10,147 [MainThread  ] [INFO ]  resample: 8H. future_prediction: 21, epochs: 100, batch_size: 20, window_size: 30, eurons: 30
+2019-09-22 22:07:45,777 [MainThread  ] [DEBUG]  update_title_pos
+2019-09-22 22:07:45,792 [MainThread  ] [DEBUG]  findfont: Matching :family=sans-serif:style=normal:variant=normal:weight=normal:stretch=normal:size=10.0 to DejaVu Sans ('/usr/local/lib/python3.5/dist-packages/matplotlib/mpl-data/fonts/ttf/DejaVuSans.ttf') with score of 0.050000.
+2019-09-22 22:07:45,849 [MainThread  ] [DEBUG]  update_title_pos

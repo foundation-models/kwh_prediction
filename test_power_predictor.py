@@ -39,8 +39,10 @@ class TestPowerForecaster(TestCase):
         self.assertEqual(j, 5856)
 
     def test_plot_duration(self):
-        powerForecaster = PowerForecaster(self.df)
-        plot_duration(powerForecaster.df[ColumnNames.LABEL.value], start_date_st="2013-10-01", end_date_st="2013-11-01")
+        powerForecaster = PowerForecaster(self.df, upsample_freq='8H')
+        plot_duration([powerForecaster.df[[ColumnNames.LABEL.value]],
+                       powerForecaster.df[[ColumnNames.TEMPERATURE.value]]],
+                      start_date_st="2013-10-01", end_date_st="2013-11-01")
 
 
     def test_adjust_index_and_training_shift(self):

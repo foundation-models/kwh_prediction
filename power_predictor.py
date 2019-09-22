@@ -21,7 +21,8 @@ from utility import normalize, find_index, \
 class Constants(Enum):
     TRAIN_TEST_SPLIT_RATIO = 0.8
     CUTOFF_DATE = pd.to_datetime('2013-12-01')  # to trim data
-    FORECASTED_TEMPERATURE_FILE = 'data/temp_interpolated_load_temperature_data.pickle'  # to save/load interpolated result
+    FORECASTED_TEMPERATURE_FILE = 'data/temp_interpolated.pickle'  # to save/load interpolated result
+    FORECASTED_POWER_FILE = 'data/power_interpolated.pickle'  # to save/load interpolated result
     DEFAULT_FUTURE_PERIODS = 4 * 24 * 10  # with freq = 15 * 60  that is  1 day
     DEFAULT_FUTURE_FREQ = '15T'  # frequency of recording power, 15 minutes
     # define model configuration
@@ -108,8 +109,8 @@ class PowerForecaster:
 
         # now turn to kwh and make the format compatible with prophet
         power = ColumnNames.POWER.value
-        interpolated_df = facebook_prophet_filter(df, temperature,
-                                                  Constants.FORECASTED_TEMPERATURE_FILE.value)
+        interpolated_df = facebook_prophet_filter(df, power,
+                                                  Constants.FORECASTED_POWER_FILE.value)
         interpolated_df.index = df.index
         df[[power]] = interpolated_df[[ColumnNames.FORECAST.value]]
 

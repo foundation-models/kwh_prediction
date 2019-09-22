@@ -29,12 +29,19 @@ def normalize(df, columns, transformer=QuantileTransformer()):
     df_scaled[columns] = scaled_one
     return df_scaled
 
-def plot_duration(df, start_date_st, end_date_st):
+def plot_duration(df_array, start_date_st, end_date_st):
     pd.plotting.register_matplotlib_converters()
     style = [':', '--', '-']
+    df = df_array[0]
     start, end = find_index(df, start_date_st, end_date_st)
-    sampled = df.iloc[start:end]
-    sampled.plot(style=style, title='Aggregated Monthly')
+    #sampled.plot(style=style)
+    #import pdb; pdb.set_trace()
+
+    fig1 = plt.figure()
+    ax1 = fig1.add_subplot(111)
+    for df in df_array:
+        df.iloc[start:end].plot(ax=ax1, style=style)
+
     plt.show()
 
 
