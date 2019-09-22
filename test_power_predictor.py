@@ -30,7 +30,8 @@ class TestPowerForecaster(TestCase):
         self.assertEqual(test_class.shuffled_X.shape, (37920 - window_size, window_size))
 
     def test_lstm(self):
-        test_class = PowerForecaster(self.df, model=Models.LSTM)
+        df = self.df
+        test_class = PowerForecaster(df, model=Models.LSTM)
         test_class.sliding_window()
         test_class.fit()
         test_class.plot_history()

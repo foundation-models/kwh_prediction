@@ -27,11 +27,12 @@ class Constants(Enum):
     SARIMAX_ORDER = (7, 1, 7)
     SARIMAX_SEASONAL_ORDER = (0, 0, 0, 0, 12)
     # the following is for lstm model
-    SLIDING_WINDOW_SIZE_OR_TIME_STEPS = 4
+    SLIDING_WINDOW_SIZE_OR_TIME_STEPS = 10
     FEATURE_SIZE = 2
-    EPOCHS = 2
+    EPOCHS = 1
+    NEURONS = 10
     INITIAL_EPOCH = 0
-    BATCH_SIZE = 72
+    BATCH_SIZE = 10
     MODEL_NAME = 'lstm'
 
 
@@ -50,7 +51,7 @@ class ColumnNames(Enum):
 
 class Models(Enum):
     PROPHET = fbprophet.Prophet(changepoint_prior_scale=0.10, yearly_seasonality=True)
-    LSTM = lstm_conv1d_model(10, (Constants.SLIDING_WINDOW_SIZE_OR_TIME_STEPS.value, Constants.FEATURE_SIZE.value))
+    LSTM = lstm_conv1d_model(Constants.NEURONS.value, (Constants.SLIDING_WINDOW_SIZE_OR_TIME_STEPS.value, Constants.FEATURE_SIZE.value))
     ARIMA = sm.tsa.statespace.SARIMAX
     VAR = VAR
 
