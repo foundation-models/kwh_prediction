@@ -9,10 +9,20 @@ from power_predictor import PowerForecaster, Models, Constants
 
 class TestPowerForecaster(TestCase):
     def setUp(self) -> None:
-        logging.getLogger().setLevel(logging.DEBUG)
+        self.set_logging('log', 'power_predictor')
         # self.df = pd.read_csv("https://drive.google.com/uc?export=download&id=1z2MBYJ8k4M5J3udlFVc2d8opE_f-S4BK")
         self.df = pd.read_csv("data/load_temperature_data.csv")
 
+    def set_logging(self, log_path, file_name):
+        logFormatter = logging.Formatter("%(asctime)s [%(threadName)-12.12s] [%(levelname)-5.5s]  %(message)s")
+        rootLogger = logging.getLogger()
+        fileHandler = logging.FileHandler("{0}/{1}.log".format(log_path, file_name))
+        fileHandler.setFormatter(logFormatter)
+        rootLogger.addHandler(fileHandler)
+        consoleHandler = logging.StreamHandler()
+        consoleHandler.setFormatter(logFormatter)
+        rootLogger.addHandler(consoleHandler)
+        rootLogger.setLevel(logging.DEBUG)
 
     def test_init(self):
         df = self.df.copy()

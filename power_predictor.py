@@ -30,10 +30,10 @@ class Constants(Enum):
     # the following is for lstm model
     SLIDING_WINDOW_SIZE_OR_TIME_STEPS = 10
     FEATURE_SIZE = 2
-    EPOCHS = 10
+    EPOCHS = 100
     NEURONS = 20
     INITIAL_EPOCH = 0
-    BATCH_SIZE = 1
+    BATCH_SIZE = 10
     MODEL_NAME = 'lstm'
 
 
