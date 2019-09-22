@@ -45,7 +45,8 @@ class TestPowerForecaster(TestCase):
 
     def test_lstm(self):
         df = self.df.copy()
-        test_class = PowerForecaster(df, model=Models.LSTM, upsample_freq='12H')
+        test_class = PowerForecaster(df, model=Models.LSTM,
+                                     upsample_freq=Constants.RESAMPLING_FREQ.value)
         test_class.sliding_window()
         test_class.fit()
         test_class.plot_history()

@@ -28,12 +28,14 @@ class Constants(Enum):
     SARIMAX_ORDER = (7, 1, 7)
     SARIMAX_SEASONAL_ORDER = (0, 0, 0, 0, 12)
     # the following is for lstm model
-    SLIDING_WINDOW_SIZE_OR_TIME_STEPS = 10
+    SLIDING_WINDOW_SIZE_OR_TIME_STEPS = 20
+    RESAMPLING_FREQ = '12H'
+    FUTURE_TIME_STEPS = 2 # corresponding to 24 hours in future
     FEATURE_SIZE = 2
     EPOCHS = 100
     NEURONS = 20
     INITIAL_EPOCH = 0
-    BATCH_SIZE = 10
+    BATCH_SIZE = 20
     MODEL_NAME = 'lstm'
 
 
@@ -349,17 +351,18 @@ class PowerForecaster:
         # Generate the data matrix
         length0 = self.df.shape[0]
         window_size = Constants.SLIDING_WINDOW_SIZE_OR_TIME_STEPS.value
+        future_time_steps = Constants.FUTURE_TIME_STEPS.value
         features_column = ColumnNames.FEATURES.value
         label_column = ColumnNames.LABEL.value
 
-        sliding_window_feature = np.zeros((length0 - window_size,
+        sliding_window_feature = np.zeros((length0 - window_size - future_time_steps,
                                            window_size, len(features_column)))
-        sliding_window_label = np.zeros((length0 - window_size, 1))
+        sliding_window_label = np.zeros((length0 - window_size - future_time_steps, 1))
 
-        for counter in range(length0 - window_size):
-            sliding_window_label[counter, :] = self.df[label_column][counter + window_size]
+        for counter in range(length0 - window_size - future_time_steps):
+            sliding_window_label[counter, :] = self.df[label_column][counter + window_size + future_time_steps]
 
-        for counter in range(length0 - window_size):
+        for counter in range(length0 - window_size - future_time_steps):
             sliding_window_feature[counter, :] = self.df[features_column][
                                                  counter: counter + window_size]
         if self.do_shuffle:
