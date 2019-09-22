@@ -28,7 +28,7 @@ class Constants(Enum):
     SARIMAX_ORDER = (7, 1, 7)
     SARIMAX_SEASONAL_ORDER = (0, 0, 0, 0, 12)
     # the following is for lstm model
-    SLIDING_WINDOW_SIZE_OR_TIME_STEPS = 20
+    SLIDING_WINDOW_SIZE_OR_TIME_STEPS = 30
     RESAMPLING_FREQ = '8H'
     FUTURE_TIME_STEPS = 3 * 7 # corresponding to 24 hours in future
     FEATURE_SIZE = 2
@@ -77,11 +77,12 @@ class PowerForecaster:
                  initial_epoch = Constants.INITIAL_EPOCH.value,
                  batch_size = Constants.BATCH_SIZE.value,
                  do_shuffle=True):
-        logging.info("resample: {}. future_prediction: {}, epochs: {}, batch_size: {}, eurons: {}"
+        logging.info("resample: {}. future_prediction: {}, epochs: {}, batch_size: {}, window_size: {}, eurons: {}"
                      .format(Constants.RESAMPLING_FREQ.value
                              , Constants.FUTURE_TIME_STEPS.value
                              , Constants.EPOCHS.value
                              , Constants.BATCH_SIZE.value
+                             , Constants.SLIDING_WINDOW_SIZE_OR_TIME_STEPS.value
                              , Constants.NEURONS.value
                              ))
         if logging.getLogger().isEnabledFor(logging.DEBUG):
@@ -260,8 +261,9 @@ class PowerForecaster:
         plt.show()
         # for snapshot record, logging.debug these too
         df_predicted = self.resultToDataFrame(predicted, Y.shape[0], label_column)
-        df_scaled_predicted = self.scaled_back(df, df_predicted, label_column)
+        df_scaled_predicted = self.scaled_back(df_predicted, label_column)
         plt.scatter(df_scaled_predicted.index, df_scaled_predicted[label_column], c='r', alpha=0.1)
+        plt.show()
 
     def scaled_back(self, df_predicted, label_column):
         features = ColumnNames.FEATURES.value
