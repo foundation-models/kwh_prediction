@@ -261,16 +261,16 @@ class PowerForecaster:
         ))
 
     def lstm_predict(self, model
-                     , start_date_to_predict=None
-                     , end_date_to_predic = None
-                     ,
+                     , start_date_to_predict_st=None
+                     , duration_in_freq = None
                      ):
         X, true_y = self.get_whole()
 
-        if start_date_to_predict is not None:
-            y_index_i, y_index_f = self.find_index(start_date_to_predict, end_date_to_predic)
-            x_index_i = 0 if y_index_i <= shift else y_index_i - shift
-            x_index_f = x_index_i + delta_index
+        if start_date_to_predict_st is not None:
+            y_index_i, _ = self.find_index(start_date_to_predict_st)
+            x_index_i = 0 if y_index_i <= self.shift else y_index_i - self.shift
+            x_index_f = x_index_i + duration_in_freq
+            y_index_f = y_index_i + duration_in_freq
 
             logging.info("Predicting time slice [{} : {}] from [{} : {}]".format(
                 self.df.index[y_index_i],self.df.index[y_index_f]

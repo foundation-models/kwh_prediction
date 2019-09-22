@@ -62,14 +62,17 @@ class TestPowerForecaster(TestCase):
     def test_lstm(self):
         df = self.df.copy()
         powerForecaster = PowerForecaster(df, model=Models.LSTM,
-                                     upsample_freq=Constants.RESAMPLING_FREQ.value)
+                                     upsample_freq='8H')
+        months_of_training = 4
+        powerForecaster.adjust_index_and_training_shift(3*30 * months_of_training,
+                                                        start_date_in_labeling_st="2012-09-01")
         powerForecaster.sliding_window()
         powerForecaster.fit()
         powerForecaster.plot_history()
         powerForecaster.evaluate()
         #powerForecaster.lstm_predict(powerForecaster.model_type.value)
         powerForecaster.lstm_predict(powerForecaster.model_type.value,
-                                     start_index_to_predict=800, delta_index=200)
+                                     start_date_to_predict_st="2012-09-01", duration_in_freq=3 * 3)
 
         #predicted = powerForecaster.predict()
         #powerForecaster.plot_prediction(1000,1200)
