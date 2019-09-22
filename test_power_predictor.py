@@ -26,7 +26,7 @@ class TestPowerForecaster(TestCase):
     def test_sliding_window(self):
         test_class = PowerForecaster(self.df, Models.LSTM)
         test_class.sliding_window()
-        window_size = Constants.SLIDING_WINDOW_SIZE
+        window_size = Constants.SLIDING_WINDOW_SIZE_OR_TIME_STEPS
         self.assertEqual(test_class.shuffled_X.shape, (37920 - window_size, window_size))
 
     def test_lstm(self):

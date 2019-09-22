@@ -27,8 +27,8 @@ class Constants(Enum):
     SARIMAX_ORDER = (7, 1, 7)
     SARIMAX_SEASONAL_ORDER = (0, 0, 0, 0, 12)
     # the following is for lstm model
-    SLIDING_WINDOW_SIZE = 4
-    FEATURE_SIZE = 1
+    SLIDING_WINDOW_SIZE_OR_TIME_STEPS = 4
+    FEATURE_SIZE = 2
     EPOCHS = 2
     INITIAL_EPOCH = 0
     BATCH_SIZE = 72
@@ -50,7 +50,7 @@ class ColumnNames(Enum):
 
 class Models(Enum):
     PROPHET = fbprophet.Prophet(changepoint_prior_scale=0.10, yearly_seasonality=True)
-    LSTM = lstm_conv1d_model(10, (Constants.SLIDING_WINDOW_SIZE.value, Constants.FEATURE_SIZE.value))
+    LSTM = lstm_conv1d_model(10, (Constants.SLIDING_WINDOW_SIZE_OR_TIME_STEPS.value, Constants.FEATURE_SIZE.value))
     ARIMA = sm.tsa.statespace.SARIMAX
     VAR = VAR
 
@@ -141,9 +141,9 @@ class PowerForecaster:
         _test_X, self.test_y = test.iloc[:, :-1], test.iloc[:, -1]
         # reshape input to be 3D [samples, timesteps, features]
         self.train_X = _train_X.values.reshape(
-            (_train_X.shape[0], Constants.SLIDING_WINDOW_SIZE.value, _train_X.shape[1]))
+            (_train_X.shape[0], Constants.SLIDING_WINDOW_SIZE_OR_TIME_STEPS.value, _train_X.shape[1]))
         self.test_X = _test_X.values.reshape((_test_X.
-                                              shape[0], Constants.SLIDING_WINDOW_SIZE.value, _test_X.shape[1]))
+                                              shape[0], Constants.SLIDING_WINDOW_SIZE_OR_TIME_STEPS.value, _test_X.shape[1]))
         print(self.train_X.shape, self.train_y.shape, self.test_X.shape, self.test_y.shape)
 
     def stationary_test(self):
@@ -195,7 +195,7 @@ class PowerForecaster:
         
     def evaluate(self):
         self.loss_metrics = self.model.value.evaluate(
-            np.expand_dims(self.val_X, axis=-1),
+            self.val_X,
             self.val_y,
             batch_size=self.batch_size,
             verbose=0
@@ -203,7 +203,13 @@ class PowerForecaster:
 
         print("Metric names:", self.model.value.metrics_names)
         print("Loss Metrics:", self.loss_metrics)
-        
+
+    def resultToDataFrame(self, data, size, column_name):
+        df = pd.DataFrame(index=self.df.iloc[0:size].index)
+        df[column_name] = data
+        return df
+
+
     def test_prediction(self):
         X, Y = self.get_whole()
         predicted = self.model.value.predict(X)
@@ -211,7 +217,6 @@ class PowerForecaster:
         # predicted_BP = self.scaleBack(predicted.flatten(), data_train.shape[0])
 
         df = self.df
-        timeaxis = df[df.columns[0]]
         label_column = ColumnNames.LABEL.value
         label = df[label_column]
         print('Model ', Constants.MODEL_NAME.value)
@@ -222,8 +227,17 @@ class PowerForecaster:
         # for snapshot record, print these too
         print("Metric names:", self.model.value.metrics_names)
         print("Loss Metrics:", self.loss_metrics)
-        #BP = self.scaledBackDataFrame(predicted, Y.shape[0], label_column)
-        #plt.scatter(BP[ColumnNames.], BP[label_column], c='r', alpha=0.1)
+        df_predicted = self.resultToDataFrame(predicted, Y.shape[0], label_column)
+        df_scaled_predicted = self.scaled_back(df, df_predicted, label_column)
+        plt.scatter(df_scaled_predicted.index, df_scaled_predicted[label_column], c='r', alpha=0.1)
+
+    def scaled_back(self, df_predicted, label_column):
+        features = ColumnNames.FEATURES.value
+        df = self.df[features].iloc[:len(df_predicted)]
+        df[label_column] = df_predicted[label_column]
+        scaled_predicted = self.transformer.inverse_transform(df[features])
+        df[features] = scaled_predicted
+        return df
 
     def prophet_fit(self):
         past = self.train_y.copy()
@@ -251,11 +265,7 @@ class PowerForecaster:
         print(self.model.value.summary())
 
         callbacks = Callbacks(Constants.MODEL_NAME.value, self.batch_size, self.epochs)
-
         X, y = self.get_shuff_train_label()
-
-        print(self.epochs)
-        print(self.initial_epoch)
 
         self.history = self.model.value.fit(
             X,
@@ -293,9 +303,10 @@ class PowerForecaster:
         elif self.model == Models.LSTM:
             if feature_set is None:
                 future = self.test_X
-            X = np.expand_dims(future, axis=-1)
+            #X = np.expand_dims(future, axis=-1)
+            X = future
             predicted = self.model.value.predict(X)
-            #if(())
+            predicted = self.resultToDataFrame(predicted)
             print("Error from prediction: ", mean_squared_error(predicted, future))
         else:
             raise ValueError("{} is not defined".format(self.model))
@@ -317,17 +328,21 @@ class PowerForecaster:
         return predicted
 
     def sliding_window(self):
-        # Generate the data matrix      
+        # Generate the data matrix
         length0 = self.df.shape[0]
-        window_size = Constants.SLIDING_WINDOW_SIZE.value
-        sliding_window_feature = np.zeros((length0 - window_size, window_size))
-        sliding_window_label = np.zeros((length0 - window_size, 1))
+        window_size = Constants.SLIDING_WINDOW_SIZE_OR_TIME_STEPS.value
+        features_column = ColumnNames.FEATURES.value
         label_column = ColumnNames.LABEL.value
+
+        sliding_window_feature = np.zeros((length0 - window_size,
+                                           window_size, len(features_column)))
+        sliding_window_label = np.zeros((length0 - window_size, 1))
+
         for counter in range(length0 - window_size):
             sliding_window_label[counter, :] = self.df[label_column][counter + window_size]
-        feature_column = ColumnNames.TEMPERATURE.value
+
         for counter in range(length0 - window_size):
-            sliding_window_feature[counter, :] = self.df[feature_column][
+            sliding_window_feature[counter, :] = self.df[features_column][
                                                  counter: counter + window_size]
         if self.do_shuffle:
             print('Random shuffeling')
@@ -354,16 +369,14 @@ class PowerForecaster:
         self.val_y = self.shuffled_y[int(split_ratio * length):, :]
         self.val_size = length - self.train_size
 
-        return None
-
     def get_shuff_train_label(self):
-        X = np.expand_dims(self.shuffled_X, axis=-1)
+        X = self.shuffled_X #np.expand_dims(self.shuffled_X, axis=-1)
         Y = self.shuffled_y
         return X, Y
 
     def evaluate_performance(self):
         # make a prediction
-        X = np.expand_dims(self.test_X, axis=-1)
+        X = self.test_X # np.expand_dims(self.test_X, axis=-1)
         yhat = self.model.value.predict(X)
         test_X = self.test_X.reshape((self.test_X.shape[0], self.test_X.shape[2]))
         # invert scaling for forecast
@@ -467,7 +480,7 @@ class PowerForecaster:
             end = self.pointer + self.batchsize
             start = self.pointer
             self.pointer += self.batchsize
-        X = np.expand_dims(self.train_data[start:end, :], axis=-1)
+        X = self.train_data[start:end, :]
         Y = self.train_label[start:end, :]
         return X, Y
 
@@ -478,18 +491,13 @@ class PowerForecaster:
 
     def get_whole(self):
         # get whole, for validation set
-        X = np.expand_dims(self.train[:, :], axis=-1)
+        X = self.train[:,:] #np.expand_dims(self.train[:, :], axis=-1)
         Y = self.label[:, :]
         return X, Y
 
     def reset(self):
         self.pointer = 0
         self.epoch = 0
-
-    def get_shuff_train_label(self):
-        X = np.expand_dims(self.shuffled_X, axis=-1)
-        Y = self.shuffled_y
-        return X, Y
 
 
 class ModelEvaluator:
