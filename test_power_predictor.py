@@ -16,13 +16,11 @@ class TestPowerForecaster(TestCase):
 
     def test_init(self):
         df = self.df.copy()
-        logging.getLogger().debug("1  Done init --- ")
         test_class = PowerForecaster(df)
         self.assertEqual(test_class.df.shape, (37920, 3))
         df = self.df.copy()
         test_class = PowerForecaster(df, upsample_freq='D')
         self.assertEqual(test_class.df.shape, (395, 3))
-        logging.getLogger().debug("2 Done init --- ")
 
     def test_visual_inspection(self):
         test_class = PowerForecaster(self.df)

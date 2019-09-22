@@ -1,3 +1,4 @@
+import logging
 import pickle
 
 import fbprophet
@@ -127,7 +128,7 @@ def load_model(dir, model_name, epoch, extension):
     file = open(file_name, 'r')
     loaded_model = file.read()
     file.close()
-    print('load model from file ' + file_name)
+    logging.info('load model from file ' + file_name)
     if (extension == '.json'):
         model = model_from_json(loaded_model)
     if (extension == '.yaml'):
@@ -170,7 +171,7 @@ def load_model_weights(dir, model, model_name, epoch=0):
     if (epoch != 0):
         ext = '.epoch' + str(epoch)
         file_name = dir + '/model.' + model_name + ext + '.h5'
-        print('loading weights from ', file_name)
+        logging.info('loading weights from ', file_name)
         model.load_weights(file_name)
 
 
@@ -219,16 +220,16 @@ def runExtraTreesRegressor(X, Y):
 
 
 def runRegressor(model, X, Y, max_depth=10, n_estimators=100):
-    print('Y.shape should be (#,): ', Y.shape)
+    logging.debug('Y.shape should be (#,): ', Y.shape)
     model.fit(X, Y)
 
     predicted = model.predict(X)
     mse = mean_squared_error(Y, predicted, multioutput='raw_values')
-    print('Model accuracy, MSE: ', mse)
+    logging.info('Model accuracy, MSE: ', mse)
     feature_importances = pd.Series(model.feature_importances_, index=X.columns)
-    print(feature_importances.size, ' number of important features calculated')
+    logging.info(feature_importances.size, ' number of important features calculated')
     return mse, predicted, model, feature_importances
 
 
-print('save and load models from yaml and json files defined.\
+logging.info('save and load models from yaml and json files defined.\
  Everything stored in folder ', dir)
