@@ -106,3 +106,9 @@ class TestPowerForecaster(TestCase):
         plt.show()
 
 
+    def test_fit_VAR(self):
+        df = self.df.copy()
+        powerForecaster = PowerForecaster(df, model=Models.VAR)
+        powerForecaster.fit()
+
+

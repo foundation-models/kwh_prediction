@@ -88,7 +88,7 @@ class PowerForecaster:
                              , sliding_window_size_or_time_steps
                              , Constants.NEURONS.value
                              ))
-        if logging.getLogger().isEnabledFor(logging.DEBUG):
+        if logging.getLogger().isEnabledFor(logging.INFO):
             explore_data(df)
         # first step is to create a timestamp column as index to turn it to a TimeSeries data
         df.index = pd.to_datetime(df[ColumnNames.DATE.value] + df[ColumnNames.TIME.value],
@@ -155,7 +155,7 @@ class PowerForecaster:
         self.train_size = None
         self.val_size = None
 
-        if logging.getLogger().isEnabledFor(logging.DEBUG):
+        if logging.getLogger().isEnabledFor(logging.INFO):
             explore_data(self.df)
 
     def train_test_split(self, df):
@@ -205,7 +205,7 @@ class PowerForecaster:
         elif self.model_type == Models.ARIMA:
             self.arima_fit()
         elif self.model_type == Models.VAR:
-            self.var_fit()
+            self.fit_VAR()
         elif self.model_type == Models.LSTM:
             self.lstm_fit()
         else:
@@ -323,12 +323,12 @@ class PowerForecaster:
         self.model_fit.summary()
         logging.debug("SARIMAX forecast", self.model_fit.forecast())
 
-    def var_fit(self):
+    def fit_VAR(self):
         logging.debug("making VAR model")
         model = VAR(endog=self.train_X[ColumnNames.FEATURES.value].dropna())
         logging.debug("VAR fitting ....")
-        self.model_fit = self.model_type.value.fit()
-        self.model_fit.summary()
+        self.model_fit = model.fit()
+        print(self.model_fit.summary())
 
     def lstm_fit(self):
         if logging.getLogger().isEnabledFor(logging.INFO):
