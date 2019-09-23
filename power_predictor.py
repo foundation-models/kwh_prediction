@@ -510,8 +510,8 @@ class PowerForecaster:
         #        ax.xaxis.set_minor_formatter(FuncFormatter(tick))
         #        ax.tick_params(which="major", axis="x", length=10, width=1.5)
 
-        by_dow = df.groupby(by=df.dow).mean()[ColumnNames.FEATURES.value]
-        ticks = 4 * 60 * 60 * np.arange(6)
+        #by_dow = df.groupby(by=df.dow).mean()[ColumnNames.FEATURES.value]
+        #ticks = 4 * 60 * 60 * np.arange(6)
 
     def plot_prediction(self, start_index, end_index):
         style = [':', '--', '-']

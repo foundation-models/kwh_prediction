@@ -86,7 +86,6 @@ class TestPowerForecaster(TestCase):
         if self.interactive:
             powerForecaster.plot_history()
         powerForecaster.evaluate()
-        #powerForecaster.lstm_predict(powerForecaster.model_type.value)
         model = powerForecaster.model_type.value
         df_predicted = powerForecaster.lstm_predict(model,
                                      start_date_to_predict_st="2013-6-01",
