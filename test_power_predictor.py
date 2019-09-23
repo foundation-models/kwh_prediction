@@ -5,7 +5,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 
 from power_predictor import PowerForecaster, Models, Constants, ColumnNames
-from utility import set_logging, find_index, plot_duration
+from utility import set_logging, find_index, plot_data_frames
 
 
 class TestPowerForecaster(TestCase):
@@ -40,9 +40,10 @@ class TestPowerForecaster(TestCase):
 
     def test_plot_duration(self):
         powerForecaster = PowerForecaster(self.df, upsample_freq='8H')
-        plot_duration([powerForecaster.df[[ColumnNames.LABEL.value]],
-                       powerForecaster.df[[ColumnNames.TEMPERATURE.value]]],
-                      start_date_st="2013-10-01", end_date_st="2013-11-01")
+        df_list = [[powerForecaster.df[[ColumnNames.LABEL.value]],
+                          powerForecaster.df[[ColumnNames.TEMPERATURE.value]]]]
+        plot_data_frames(df_list,
+                         start_date_st="2013-5-01", end_date_st="2013-11-01")
 
 
     def test_adjust_index_and_training_shift(self):
@@ -78,8 +79,8 @@ class TestPowerForecaster(TestCase):
         df = self.df.copy()
         powerForecaster = PowerForecaster(df, model=Models.LSTM,
                                      upsample_freq='8H')
-        powerForecaster.block_after_date("2013-07-01")
-        powerForecaster.adjust_index_and_training_shift(start_date_in_labeling_st="2012-11-05")
+        powerForecaster.block_after_date("2013-06-01")
+        powerForecaster.adjust_index_and_training_shift(start_date_in_labeling_st="2012-11-02")
         powerForecaster.sliding_window()
         powerForecaster.fit()
         if self.interactive:
@@ -87,12 +88,14 @@ class TestPowerForecaster(TestCase):
         powerForecaster.evaluate()
         #powerForecaster.lstm_predict(powerForecaster.model_type.value)
         model = powerForecaster.model_type.value
-        powerForecaster.lstm_predict(model,
-                                     start_date_to_predict_st="2013-10-01", duration_in_freq=3 * 30)
-
-        #predicted = powerForecaster.predict()
-        #powerForecaster.plot_prediction(1000,1200)
-        self.assertTrue(True)
+        df_predicted = powerForecaster.lstm_predict(model,
+                                     start_date_to_predict_st="2013-6-01",
+                                                    duration_in_freq=3 * 30
+                                                    )
+       # df_list = [powerForecaster.df[[ColumnNames.LABEL.value]],
+        #            df_predicted]
+      #  plot_data_frames(df_list,
+      #                   start_date_st="2013-6-01", end_date_st="2013-6-20")
 
     def test_fit_predict(self):
         powerForecaster = PowerForecaster(self.df, Models.LSTM)

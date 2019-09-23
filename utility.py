@@ -4,6 +4,7 @@ import pandas as pd
 from sklearn.preprocessing import QuantileTransformer
 import matplotlib.pylab as plt
 
+
 def set_logging(log_path, file_name):
     logFormatter = logging.Formatter("%(asctime)s [%(threadName)-12.12s] [%(levelname)-5.5s]  %(message)s")
     rootLogger = logging.getLogger()
@@ -14,7 +15,6 @@ def set_logging(log_path, file_name):
     consoleHandler.setFormatter(logFormatter)
     rootLogger.addHandler(consoleHandler)
     rootLogger.setLevel(logging.DEBUG)
-
 
 
 def normalize(df, columns, transformer=QuantileTransformer()):
@@ -29,13 +29,19 @@ def normalize(df, columns, transformer=QuantileTransformer()):
     df_scaled[columns] = scaled_one
     return df_scaled
 
-def plot_duration(df_array, start_date_st, end_date_st):
+
+def plot_data_frames(df_array, start_date_st=None, end_date_st=None):
     pd.plotting.register_matplotlib_converters()
     style = [':', '--', '-']
-    df = df_array[0]
-    start, end = find_index(df, start_date_st, end_date_st)
-    #sampled.plot(style=style)
-    #import pdb; pdb.set_trace()
+
+    if start_date_st is not None:
+        df = df_array[0]
+        start, end = find_index(df, start_date_st, end_date_st)
+    else:
+        start = 0
+        end = -1
+    # sampled.plot(style=style)
+    # import pdb; pdb.set_trace()
 
     fig1 = plt.figure()
     ax1 = fig1.add_subplot(111)
@@ -45,14 +51,15 @@ def plot_duration(df_array, start_date_st, end_date_st):
     plt.show()
 
 
-def find_index(df, start_date_st, end_date_st = None):
-    if not isinstance(df.index[0], pd.Timestamp):
-        msg = "Index should be of type pandas Timestamp"
-        logging.error(msg)
-        raise ValueError(msg)
+def find_index(df, start_date_st, end_date_st=None):
+    #  if not isinstance(df.index[0], pd.Timestamp):
+    #      msg = "Index should be of type pandas Timestamp"
+    #      logging.error(msg)
+    #      raise ValueError(msg)
     start_date = pd.to_datetime(start_date_st)
     tmp_df = pd.DataFrame()
     tmp_df['date'] = df.index
+
     if end_date_st is None:
         mask = (tmp_df['date'] >= start_date)
     else:
@@ -61,7 +68,7 @@ def find_index(df, start_date_st, end_date_st = None):
 
     index = tmp_df.loc[mask].index
     if len(index) == 0:
-        msg = "Nothing matched your critera"
+        msg = "Nothing matched your criteria [{}-{}]".format(start_date_st, end_date_st)
         logging.error(msg)
         raise ValueError(msg)
     return index[0], index[-1]

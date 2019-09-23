@@ -222,10 +222,14 @@ class PowerForecaster:
         logging.info("Metric names:{}".format(self.model_type.value.metrics_names))
         logging.info("Loss Metrics:{}".format(self.loss_metrics))
 
-    def resultToDataFrame(self, data, size, column_name):
-        df = pd.DataFrame(index=self.df.iloc[0:size].index)
-        df[column_name] = data
-        return df
+    def resultToDataFrame(self, data, start_index, end_index, do_scale_back=False):
+        label_column = ColumnNames.LABEL.value
+        df = self.df.iloc[start_index:end_index]
+        df[label_column] = data
+        if do_scale_back:
+            features = ColumnNames.FEATURES.value
+            df[features] = self.transformer.inverse_transform(df[features])
+        return df[[label_column]]
 
 
     def block_after_date(self, start_block_date_st):
@@ -267,6 +271,7 @@ class PowerForecaster:
     def lstm_predict(self, model
                      , start_date_to_predict_st=None
                      , duration_in_freq = None
+                     , do_scale_back = False
                      ):
         X, true_y = self.get_whole()
 
@@ -290,17 +295,14 @@ class PowerForecaster:
         plt.plot(predicted, 'r')
         plt.plot(true_y, 'b')
         plt.show()
+        df_predicted = self.resultToDataFrame(predicted, x_index_i + self.shift
+                                              , x_index_f + self.shift, do_scale_back)
+        return df_predicted
 
+    def scale_back(self, df_predicted, start_index, end_index):
         label_column = ColumnNames.LABEL.value
-        # for snapshot record, logging.debug these too
-        df_predicted = self.resultToDataFrame(predicted, true_y.shape[0], label_column)
-        df_scaled_predicted = self.scaled_back(df_predicted, label_column)
-        plt.scatter(df_scaled_predicted.index, df_scaled_predicted[label_column], c='r', alpha=0.1)
-        plt.show()
-
-    def scaled_back(self, df_predicted, label_column):
         features = ColumnNames.FEATURES.value
-        df = self.df[features].iloc[:len(df_predicted)]
+        df = self.df[features].iloc[start_index:end_index]
         df[label_column] = df_predicted[label_column]
         scaled_predicted = self.transformer.inverse_transform(df[features])
         df[features] = scaled_predicted
@@ -369,7 +371,7 @@ class PowerForecaster:
             # X = np.expand_dims(future, axis=-1)
             X = future
             predicted = self.model_type.value.predict(X)
-            predicted = self.resultToDataFrame(predicted)
+            # predicted = self.resultToDataFrame(predicted)
             logging.info("Error from prediction: {}".format(mean_squared_error(predicted, future)))
         else:
             raise ValueError("{} is not defined".format(self.model_type))
