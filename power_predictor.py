@@ -23,7 +23,7 @@ class Constants(Enum):
     CUTOFF_DATE = pd.to_datetime('2013-12-01')  # to trim data
     FORECASTED_TEMPERATURE_FILE = 'data/temp_interpolated.pickle'  # to save/load interpolated result
     FORECASTED_POWER_FILE = 'data/power_interpolated.pickle'  # to save/load interpolated result
-    DEFAULT_FUTURE_PERIODS = 4 * 24 * 10  # with freq = 15 * 60  that is  1 day
+    DEFAULT_FUTURE_PERIODS = 4 * 24 * 30  # with freq = 15 * 60  that is  1 day
     DEFAULT_FUTURE_FREQ = '15T'  # frequency of recording power, 15 minutes
     # define model configuration
     SARIMAX_ORDER = (7, 1, 7)
@@ -93,7 +93,8 @@ class PowerForecaster:
         # first step is to create a timestamp column as index to turn it to a TimeSeries data
         df.index = pd.to_datetime(df[ColumnNames.DATE.value] + df[ColumnNames.TIME.value],
                                   format='%Y-%m-%d%H:%M:%S', errors='raise')
-        df.drop('Unnamed: 0', axis=1, inplace=True)
+        if 'Unnamed: 0' in df.columns:
+            df.drop('Unnamed: 0', axis=1, inplace=True)
 
         # keep a copy of original dataset for future comparison
         self.df_original = df.copy()
@@ -138,8 +139,8 @@ class PowerForecaster:
         self.df_blocked = None
         self.train_test_split_ratio = train_test_split_ratio
         self.model_type = model
-        self.train_X, self.test_X = self.train_test_split(self.df[features])
-        self.train_y, self.test_y = self.train_test_split(self.df[ColumnNames.LABELS.value])
+        self.train_X, self.test_X, self.train_test_split_index = self.train_test_split(self.df[features])
+        self.train_y, self.test_y, _ = self.train_test_split(self.df[ColumnNames.LABELS.value])
         self.model_fit = None
         self.epochs = epochs
         self.initial_epoch = initial_epoch
@@ -162,7 +163,7 @@ class PowerForecaster:
         split_index = int(self.train_test_split_ratio * df.shape[0])
         train = df.iloc[:split_index, :]
         test = df.iloc[split_index:, :]
-        return train, test
+        return train, test, split_index
 
     def stationary_test(self):
         dataset = self.test_y.dropna()
@@ -205,7 +206,7 @@ class PowerForecaster:
         elif self.model_type == Models.ARIMA:
             self.arima_fit()
         elif self.model_type == Models.VAR:
-            self.fit_VAR()
+            self.var_fit()
         elif self.model_type == Models.LSTM:
             self.lstm_fit()
         else:
@@ -323,7 +324,7 @@ class PowerForecaster:
         self.model_fit.summary()
         logging.debug("SARIMAX forecast", self.model_fit.forecast())
 
-    def fit_VAR(self):
+    def var_fit(self):
         logging.debug("making VAR model")
         model = VAR(endog=self.train_X[ColumnNames.FEATURES.value].dropna())
         logging.debug("VAR fitting ....")
@@ -366,17 +367,15 @@ class PowerForecaster:
         elif self.model_type == Models.VAR:
             predicted = self.var_predict(future)
         elif self.model_type == Models.LSTM:
-            if feature_set is None:
-                future = self.test_X
-            # X = np.expand_dims(future, axis=-1)
-            X = future
-            predicted = self.model_type.value.predict(X)
-            # predicted = self.resultToDataFrame(predicted)
-            logging.info("Error from prediction: {}".format(mean_squared_error(predicted, future)))
+            return self.lstm_predict(self.model.value,
+                                     start_date_to_predict_st="2013-6-01",
+                                                    duration_in_freq=3 * 30)
         else:
             raise ValueError("{} is not defined".format(self.model_type))
+        df_predicted = self.resultToDataFrame(predicted, self.train_test_split_index
+                                              , self.train_test_split_index + len(predicted))
 
-        return predicted
+        return df_predicted
 
     def arima_predict(self, future):
         end = str(self.train_y.index[-1])

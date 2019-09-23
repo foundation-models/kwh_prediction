@@ -110,5 +110,7 @@ class TestPowerForecaster(TestCase):
         df = self.df.copy()
         powerForecaster = PowerForecaster(df, model=Models.VAR)
         powerForecaster.fit()
+        predicted = powerForecaster.predict()
+
 
 
